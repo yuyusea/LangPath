@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Accordion,
   AccordionContent,
@@ -12,8 +13,9 @@ import {
 import { Calendar, Target, Loader2 } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import type { ScheduleData } from "@shared/schema";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { ScheduleData, UserProgress } from "@shared/schema";
 
 const DAY_LABELS: { [key: string]: string } = {
   monday: "월",
@@ -28,7 +30,8 @@ const DAY_LABELS: { [key: string]: string } = {
 export default function Schedule() {
   const { profileId, hasProfile } = useUserProfile();
   const [, setLocation] = useLocation();
-  const [expandedMonth, setExpandedMonth] = useState<string>("week-1");
+  const [expandedMonth, setExpandedMonth] = useState<string>("month-1");
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!hasProfile) {
@@ -36,16 +39,34 @@ export default function Schedule() {
     }
   }, [hasProfile, setLocation]);
 
-  const { data: schedule, isLoading } = useQuery<ScheduleData>({
+  const { data: schedule, isLoading: scheduleLoading } = useQuery<ScheduleData>({
     queryKey: ["/api/schedule", profileId],
     enabled: !!profileId,
+  });
+
+  const { data: progress, isLoading: progressLoading } = useQuery<UserProgress>({
+    queryKey: ["/api/progress", profileId],
+    enabled: !!profileId,
+  });
+
+  const toggleTaskMutation = useMutation({
+    mutationFn: async ({ taskId, completed }: { taskId: string; completed: boolean }) => {
+      return await apiRequest("POST", "/api/progress/toggle-task", {
+        profileId,
+        taskId,
+        completed,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/progress", profileId] });
+    },
   });
 
   if (!hasProfile || !profileId) {
     return null;
   }
 
-  if (isLoading) {
+  if (scheduleLoading || progressLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -54,6 +75,11 @@ export default function Schedule() {
   }
 
   const months = schedule?.months || [];
+  const taskCompletions = (progress?.taskCompletions as any) || {};
+
+  const handleTaskToggle = (taskId: string, completed: boolean) => {
+    toggleTaskMutation.mutate({ taskId, completed });
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
@@ -72,109 +98,140 @@ export default function Schedule() {
 
         {/* Monthly Roadmap */}
         <div className="space-y-6">
-          {months.map((month) => (
-            <Card key={month.monthNumber} className="overflow-hidden">
-              <CardHeader className="bg-primary/5 border-b border-primary/10">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-primary" />
-                      <h2 className="text-xl font-semibold text-foreground">
-                        {month.monthNumber}개월차
-                      </h2>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Target className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                      <p className="text-foreground font-medium">{month.goal}</p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="shrink-0">
-                    {month.weeks.length}주
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="p-4">
-                <Accordion
-                  type="single"
-                  collapsible
-                  value={expandedMonth}
-                  onValueChange={setExpandedMonth}
-                  className="space-y-2"
-                >
-                  {month.weeks.map((week) => (
-                    <AccordionItem
-                      key={week.weekNumber}
-                      value={`week-${week.weekNumber}`}
-                      className="border rounded-md px-4"
+          <Accordion
+            type="single"
+            collapsible
+            value={expandedMonth}
+            onValueChange={setExpandedMonth}
+            className="space-y-6"
+          >
+            {months.map((month) => (
+              <AccordionItem
+                key={month.monthNumber}
+                value={`month-${month.monthNumber}`}
+                className="border-none"
+              >
+                <Card className="overflow-hidden">
+                  <CardHeader className="bg-primary/5 border-b border-primary/10">
+                    <AccordionTrigger 
+                      className="hover:no-underline p-0"
+                      data-testid={`month-${month.monthNumber}-trigger`}
                     >
-                      <AccordionTrigger 
-                        className="hover:no-underline py-4"
-                        data-testid={`week-${week.weekNumber}-trigger`}
-                      >
-                        <div className="flex items-center gap-3 text-left">
-                          <Badge variant="outline" className="shrink-0">
-                            {week.weekNumber}주차
-                          </Badge>
-                          <span className="font-medium text-foreground">
-                            {week.goal}
-                          </span>
-                        </div>
-                      </AccordionTrigger>
-                      
-                      <AccordionContent className="pb-4 pt-2">
-                        {week.days && week.days.length > 0 ? (
-                          <div className="space-y-3">
-                            {week.days.map((day) => (
-                              <div
-                                key={day.dayOfWeek}
-                                className="pl-4 border-l-2 border-primary/20 space-y-2"
-                              >
-                                <h4 className="font-medium text-sm text-muted-foreground">
-                                  {DAY_LABELS[day.dayOfWeek]}요일
-                                </h4>
-                                <div className="space-y-2">
-                                  {day.tasks.map((task, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="text-sm bg-muted/30 rounded-md p-3"
-                                    >
-                                      <div className="flex items-start justify-between gap-2">
-                                        <span className="font-medium text-foreground">
-                                          {task.title}
-                                        </span>
-                                        <span className="text-muted-foreground shrink-0">
-                                          {task.duration}
-                                        </span>
-                                      </div>
-                                      {task.details && task.details.length > 0 && (
-                                        <ul className="mt-1 space-y-1">
-                                          {task.details.map((detail, i) => (
-                                            <li key={i} className="text-muted-foreground flex items-start gap-1">
-                                              <span className="text-primary">•</span>
-                                              {detail}
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
+                      <div className="flex items-start justify-between gap-4 w-full">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-primary" />
+                            <h2 className="text-xl font-semibold text-foreground">
+                              {month.monthNumber}개월차
+                            </h2>
                           </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground pl-4">
-                            세부 계획이 곧 업데이트됩니다
-                          </p>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </CardContent>
-            </Card>
-          ))}
+                          <div className="flex items-start gap-2">
+                            <Target className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                            <p className="text-foreground font-medium">{month.goal}</p>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0">
+                          {month.weeks.length}주
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                  </CardHeader>
+                  
+                  <AccordionContent className="pb-0">
+                    <CardContent className="p-4 space-y-4">
+                      {month.weeks.map((week) => (
+                        <div key={week.weekNumber} className="space-y-3">
+                          <div className="flex items-center gap-3 py-2 border-b">
+                            <Badge variant="outline" className="shrink-0">
+                              {week.weekNumber}주차
+                            </Badge>
+                            <span className="font-medium text-foreground">
+                              {week.goal}
+                            </span>
+                          </div>
+                          
+                          {week.days && week.days.length > 0 ? (
+                            <div className="space-y-3">
+                              {week.days.map((day) => (
+                                <div
+                                  key={day.dayOfWeek}
+                                  className="pl-4 border-l-2 border-primary/20 space-y-2"
+                                >
+                                  <h4 className="font-medium text-sm text-muted-foreground">
+                                    {DAY_LABELS[day.dayOfWeek]}요일
+                                  </h4>
+                                  <div className="space-y-2">
+                                    {day.tasks.map((task, idx) => {
+                                      const taskId = `${week.weekNumber}-${day.dayOfWeek}-${idx}`;
+                                      const isCompleted = taskCompletions[taskId] === true;
+                                      
+                                      return (
+                                        <div
+                                          key={idx}
+                                          className="text-sm bg-muted/30 rounded-md p-3 flex items-start gap-3"
+                                          data-testid={`task-${taskId}`}
+                                        >
+                                          <Checkbox
+                                            checked={isCompleted}
+                                            onCheckedChange={(checked) => 
+                                              handleTaskToggle(taskId, checked === true)
+                                            }
+                                            data-testid={`checkbox-${taskId}`}
+                                            className="mt-0.5"
+                                          />
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between gap-2">
+                                              <span 
+                                                className={`font-medium ${
+                                                  isCompleted 
+                                                    ? "line-through text-muted-foreground" 
+                                                    : "text-foreground"
+                                                }`}
+                                              >
+                                                {task.title}
+                                              </span>
+                                              <span className="text-muted-foreground shrink-0">
+                                                {task.duration}
+                                              </span>
+                                            </div>
+                                            {task.details && task.details.length > 0 && (
+                                              <ul className="mt-1 space-y-1">
+                                                {task.details.map((detail, i) => (
+                                                  <li 
+                                                    key={i} 
+                                                    className={`flex items-start gap-1 ${
+                                                      isCompleted 
+                                                        ? "text-muted-foreground/70" 
+                                                        : "text-muted-foreground"
+                                                    }`}
+                                                  >
+                                                    <span className="text-primary">•</span>
+                                                    {detail}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground pl-4">
+                              세부 계획이 곧 업데이트됩니다
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </AccordionContent>
+                </Card>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </div>
 

@@ -29,9 +29,12 @@ export const userProgress = pgTable("user_progress", {
   currentWeek: integer("current_week").notNull().default(1),
   totalWeeks: integer("total_weeks").notNull().default(12),
   completedDays: jsonb("completed_days").notNull().default(sql`'{}'::jsonb`), // { "1": { "monday": true }, ... }
+  taskCompletions: jsonb("task_completions").notNull().default(sql`'{}'::jsonb`), // { "1-monday-0": true, "1-monday-1": false, ... }
+  completedDates: jsonb("completed_dates").notNull().default(sql`'{}'::jsonb`), // { "2025-11-06": true, ... }
   streakDays: integer("streak_days").notNull().default(0),
   totalTasksCompleted: integer("total_tasks_completed").notNull().default(0),
   lastCompletedDate: text("last_completed_date"),
+  startDate: text("start_date").notNull().default(sql`CURRENT_DATE::text`), // When user started learning
 });
 
 // Zod schemas
@@ -62,6 +65,7 @@ export interface Task {
   title: string;
   duration: string;
   details?: string[];
+  taskId?: string; // unique identifier for completion tracking
 }
 
 export interface DayPlan {

@@ -124,6 +124,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Toggle task completion
+  app.post("/api/progress/toggle-task", async (req, res) => {
+    try {
+      const { profileId, taskId, completed } = req.body;
+      
+      if (!profileId || !taskId || completed === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const progress = await storage.getUserProgress(profileId);
+      const schedule = await storage.getLearningSchedule(profileId);
+      
+      if (!progress || !schedule) {
+        return res.status(404).json({ error: "Progress or schedule not found" });
+      }
+      
+      const taskCompletions = (progress.taskCompletions as any) || {};
+      const completedDays = (progress.completedDays as any) || {};
+      
+      // Update task completion status
+      taskCompletions[taskId] = completed;
+      
+      // Parse taskId to get week and day info
+      const [weekStr, dayOfWeek] = taskId.split('-');
+      const weekNumber = parseInt(weekStr);
+      
+      // Get all tasks for this day from schedule
+      const scheduleData = schedule.scheduleData as unknown as ScheduleData;
+      let dayTasks: Task[] = [];
+      
+      for (const month of scheduleData.months) {
+        const week = month.weeks.find(w => w.weekNumber === weekNumber);
+        if (week) {
+          const day = week.days.find(d => d.dayOfWeek === dayOfWeek);
+          if (day) {
+            dayTasks = day.tasks;
+            break;
+          }
+        }
+      }
+      
+      // Check if all tasks for this day are completed
+      let allDayTasksCompleted = true;
+      for (let i = 0; i < dayTasks.length; i++) {
+        const tid = `${weekNumber}-${dayOfWeek}-${i}`;
+        if (!taskCompletions[tid]) {
+          allDayTasksCompleted = false;
+          break;
+        }
+      }
+      
+      // Update completedDays if all tasks are done
+      if (!completedDays[weekNumber]) {
+        completedDays[weekNumber] = {};
+      }
+      
+      const isNowCompleted = allDayTasksCompleted && dayTasks.length > 0;
+      
+      if (isNowCompleted) {
+        completedDays[weekNumber][dayOfWeek] = true;
+      } else {
+        completedDays[weekNumber][dayOfWeek] = false;
+      }
+      
+      // Convert week/day to actual date and update completedDates
+      const actualDate = weekDayToDate(progress.startDate || new Date().toISOString().split('T')[0], weekNumber, dayOfWeek);
+      const completedDates = (progress.completedDates as any) || {};
+      
+      if (isNowCompleted) {
+        completedDates[actualDate] = true;
+      } else {
+        delete completedDates[actualDate];
+      }
+      
+      // Calculate streak from actual completed dates
+      const { streak: newStreak, lastDate } = calculateStreak(completedDates);
+      const lastCompletedDate = lastDate;
+      
+      // Count total completed tasks
+      const totalCompleted = Object.values(taskCompletions).filter(Boolean).length;
+      
+      // Update progress
+      const updated = await storage.updateUserProgress(profileId, {
+        taskCompletions,
+        completedDays,
+        completedDates,
+        streakDays: newStreak,
+        totalTasksCompleted: totalCompleted,
+        lastCompletedDate,
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error toggling task:", error);
+      res.status(500).json({ error: "Failed to toggle task" });
+    }
+  });
+  
   // Complete tasks for a day
   app.post("/api/progress/complete", async (req, res) => {
     try {
@@ -207,4 +305,65 @@ function getTodayDayOfWeek(): string {
   const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const today = new Date().getDay();
   return days[today];
+}
+
+// Helper function to convert week/day to actual date
+function weekDayToDate(startDate: string, weekNumber: number, dayOfWeek: string): string {
+  const dayIndex: { [key: string]: number } = {
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+    sunday: 0,
+  };
+  
+  const start = new Date(startDate);
+  const startDayIndex = start.getDay();
+  
+  // Calculate days to add
+  let targetDayIndex = dayIndex[dayOfWeek];
+  let daysToAdd = targetDayIndex - startDayIndex;
+  
+  // Adjust for week number (each week is 7 days)
+  daysToAdd += (weekNumber - 1) * 7;
+  
+  // If target day is before start day in the week, add 7 days
+  if (daysToAdd < 0) {
+    daysToAdd += 7;
+  }
+  
+  const targetDate = new Date(start);
+  targetDate.setDate(start.getDate() + daysToAdd);
+  
+  return targetDate.toISOString().split('T')[0];
+}
+
+// Calculate streak from completed dates
+function calculateStreak(completedDates: { [date: string]: boolean }): { streak: number; lastDate: string | null } {
+  const dates = Object.keys(completedDates).filter(d => completedDates[d]).sort();
+  
+  if (dates.length === 0) {
+    return { streak: 0, lastDate: null };
+  }
+  
+  // Start from the most recent completed date, not today
+  const mostRecentDate = dates[dates.length - 1];
+  let streak = 1; // Count the most recent date
+  let currentDate = new Date(mostRecentDate);
+  currentDate.setDate(currentDate.getDate() - 1);
+  
+  // Count backwards from most recent completed date
+  while (true) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    if (completedDates[dateStr]) {
+      streak++;
+      currentDate.setDate(currentDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  
+  return { streak, lastDate: mostRecentDate };
 }
