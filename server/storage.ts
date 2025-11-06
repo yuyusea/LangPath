@@ -8,6 +8,9 @@ import type {
   InsertUserProgress,
   ScheduleData,
 } from "@shared/schema";
+import { userProfiles, learningSchedules, userProgress } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // User Profile
@@ -24,61 +27,54 @@ export interface IStorage {
   updateUserProgress(userProfileId: string, updates: Partial<UserProgress>): Promise<UserProgress>;
 }
 
-export class MemStorage implements IStorage {
-  private userProfiles: Map<string, UserProfile>;
-  private learningSchedules: Map<string, LearningSchedule>;
-  private userProgresses: Map<string, UserProgress>;
-
-  constructor() {
-    this.userProfiles = new Map();
-    this.learningSchedules = new Map();
-    this.userProgresses = new Map();
-  }
-
+// Database storage implementation using Drizzle ORM
+export class DatabaseStorage implements IStorage {
   async createUserProfile(insertProfile: InsertUserProfile): Promise<UserProfile> {
-    const id = randomUUID();
-    const profile: UserProfile = { ...insertProfile, id };
-    this.userProfiles.set(id, profile);
+    const [profile] = await db
+      .insert(userProfiles)
+      .values(insertProfile)
+      .returning();
     return profile;
   }
 
   async getUserProfile(id: string): Promise<UserProfile | undefined> {
-    return this.userProfiles.get(id);
+    const [profile] = await db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.id, id));
+    return profile || undefined;
   }
 
   async createLearningSchedule(insertSchedule: InsertLearningSchedule): Promise<LearningSchedule> {
-    const id = randomUUID();
-    const schedule: LearningSchedule = { ...insertSchedule, id };
-    this.learningSchedules.set(id, schedule);
+    const [schedule] = await db
+      .insert(learningSchedules)
+      .values(insertSchedule)
+      .returning();
     return schedule;
   }
 
   async getLearningSchedule(userProfileId: string): Promise<LearningSchedule | undefined> {
-    return Array.from(this.learningSchedules.values()).find(
-      (schedule) => schedule.userProfileId === userProfileId
-    );
+    const [schedule] = await db
+      .select()
+      .from(learningSchedules)
+      .where(eq(learningSchedules.userProfileId, userProfileId));
+    return schedule || undefined;
   }
 
   async createUserProgress(insertProgress: InsertUserProgress): Promise<UserProgress> {
-    const id = randomUUID();
-    const progress: UserProgress = {
-      ...insertProgress,
-      id,
-      currentWeek: insertProgress.currentWeek ?? 1,
-      totalWeeks: insertProgress.totalWeeks ?? 12,
-      completedDays: insertProgress.completedDays ?? {},
-      streakDays: insertProgress.streakDays ?? 0,
-      totalTasksCompleted: insertProgress.totalTasksCompleted ?? 0,
-      lastCompletedDate: insertProgress.lastCompletedDate ?? null,
-    };
-    this.userProgresses.set(id, progress);
+    const [progress] = await db
+      .insert(userProgress)
+      .values(insertProgress)
+      .returning();
     return progress;
   }
 
   async getUserProgress(userProfileId: string): Promise<UserProgress | undefined> {
-    return Array.from(this.userProgresses.values()).find(
-      (progress) => progress.userProfileId === userProfileId
-    );
+    const [progress] = await db
+      .select()
+      .from(userProgress)
+      .where(eq(userProgress.userProfileId, userProfileId));
+    return progress || undefined;
   }
 
   async updateUserProgress(userProfileId: string, updates: Partial<UserProgress>): Promise<UserProgress> {
@@ -87,10 +83,13 @@ export class MemStorage implements IStorage {
       throw new Error("Progress not found");
     }
     
-    const updated: UserProgress = { ...existing, ...updates };
-    this.userProgresses.set(existing.id, updated);
+    const [updated] = await db
+      .update(userProgress)
+      .set(updates)
+      .where(eq(userProgress.id, existing.id))
+      .returning();
     return updated;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
