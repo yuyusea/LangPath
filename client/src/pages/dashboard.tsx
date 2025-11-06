@@ -24,7 +24,6 @@ interface TodayResponse {
 export default function Dashboard() {
   const { profileId, hasProfile } = useUserProfile();
   const [, setLocation] = useLocation();
-  const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -42,6 +41,19 @@ export default function Dashboard() {
   const { data: progress, isLoading: progressLoading } = useQuery<UserProgress>({
     queryKey: ["/api/progress", profileId],
     enabled: !!profileId,
+  });
+
+  const toggleTaskMutation = useMutation({
+    mutationFn: async (data: { taskId: string; completed: boolean }) => {
+      return await apiRequest("POST", "/api/progress/toggle-task", {
+        profileId,
+        taskId: data.taskId,
+        completed: data.completed,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/progress", profileId] });
+    },
   });
 
   const completeMutation = useMutation({
@@ -86,30 +98,38 @@ export default function Dashboard() {
   const daysCompletedThisWeek = Object.values(completedDaysData).filter(Boolean).length;
   const weeklyCompletionRate = (daysCompletedThisWeek / 7) * 100;
 
-  const completedCount = completedTasks.size;
+  // Get completion status from backend
+  const taskCompletions = (progress?.taskCompletions as any) || {};
+  const completedCount = tasks.filter(task => task.taskId && taskCompletions[task.taskId]).length;
   const totalCount = tasks.length;
   const completionPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  const handleTaskToggle = (taskTitle: string, completed: boolean) => {
-    setCompletedTasks((prev) => {
-      const newSet = new Set(prev);
-      if (completed) {
-        newSet.add(taskTitle);
-      } else {
-        newSet.delete(taskTitle);
-      }
-      return newSet;
+  const handleTaskToggle = async (task: Task, completed: boolean) => {
+    if (!task.taskId) return;
+    
+    await toggleTaskMutation.mutateAsync({
+      taskId: task.taskId,
+      completed,
     });
   };
 
   const handleCompleteAll = async () => {
     if (completedCount === totalCount && totalCount > 0) {
-      await completeMutation.mutateAsync({
-        dayOfWeek,
-        tasksCompleted: totalCount,
+      // Already all completed, just show message
+      toast({
+        title: "이미 완료했습니다!",
+        description: "오늘의 모든 과제를 완료했어요.",
       });
     } else {
-      setCompletedTasks(new Set(tasks.map(t => t.title)));
+      // Mark all as complete
+      for (const task of tasks) {
+        if (task.taskId && !taskCompletions[task.taskId]) {
+          await toggleTaskMutation.mutateAsync({
+            taskId: task.taskId,
+            completed: true,
+          });
+        }
+      }
     }
   };
 
@@ -188,10 +208,10 @@ export default function Dashboard() {
                 {tasks.length > 0 ? (
                   tasks.map((task) => (
                     <TaskCard
-                      key={task.title}
+                      key={task.taskId || task.title}
                       task={task}
-                      isCompleted={completedTasks.has(task.title)}
-                      onToggle={(completed) => handleTaskToggle(task.title, completed)}
+                      isCompleted={task.taskId ? !!taskCompletions[task.taskId] : false}
+                      onToggle={(completed) => handleTaskToggle(task, completed)}
                     />
                   ))
                 ) : (

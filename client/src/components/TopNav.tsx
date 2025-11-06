@@ -1,10 +1,11 @@
-import { Home, Calendar, TrendingUp, User } from "lucide-react";
+import { Home, Calendar, MessageCircle, TrendingUp, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { path: "/dashboard", label: "오늘", icon: Home, testId: "nav-today" },
   { path: "/schedule", label: "스케줄", icon: Calendar, testId: "nav-schedule" },
+  { path: "/chat", label: "챗봇", icon: MessageCircle, testId: "nav-chat" },
   { path: "/progress", label: "진행률", icon: TrendingUp, testId: "nav-progress" },
   { path: "/profile", label: "프로필", icon: User, testId: "nav-profile" },
 ];

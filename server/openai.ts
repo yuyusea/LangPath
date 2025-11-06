@@ -294,3 +294,64 @@ JSON 형식으로 출력해주세요:
     return generateMockSchedule(profile);
   }
 }
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function chatWithAI(
+  profile: InsertUserProfile,
+  userMessage: string,
+  conversationHistory: ChatMessage[] = []
+): Promise<string> {
+  const languageLabel = getLanguageLabel(profile.language);
+  
+  const systemPrompt = `당신은 ${languageLabel} 학습을 돕는 친절한 AI 어시스턴트입니다.
+
+학습자 정보:
+- 학습 언어: ${languageLabel}
+- 현재 수준: ${profile.currentLevel}
+- 목표: ${profile.goal}
+- 하루 학습 시간: ${profile.dailyTime}
+- 선호 학습 방식: ${profile.learningStyle}
+- 약점: ${profile.weakness}
+
+역할:
+1. 학습 관련 질문에 구체적이고 실용적인 답변을 제공하세요
+2. 학습자의 수준에 맞는 설명을 하세요
+3. 예시를 들어서 설명하세요
+4. 격려하고 동기부여하세요
+5. 짧고 명확하게 답변하세요 (너무 길지 않게)
+
+답변 스타일:
+- 친근하고 격려하는 톤
+- 구체적인 예시 포함
+- 실천 가능한 조언 제공
+- 필요시 단계별 설명`;
+
+  try {
+    const messages = [
+      { role: "system" as const, content: systemPrompt },
+      ...conversationHistory.map(msg => ({ role: msg.role, content: msg.content })),
+      { role: "user" as const, content: userMessage }
+    ];
+
+    console.log("[OpenAI] Sending chat request");
+    
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+
+    const response = completion.choices[0]?.message?.content || "죄송합니다. 답변을 생성할 수 없습니다.";
+    console.log("[OpenAI] Chat response received");
+    
+    return response;
+  } catch (error: any) {
+    console.error("[OpenAI] Chat error:", error);
+    throw new Error("Failed to generate chat response");
+  }
+}

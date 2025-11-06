@@ -24,7 +24,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scheduleData: scheduleData as any, // JSON type
       });
       
-      // Initialize progress
+      // Initialize progress with start date
+      const today = new Date().toISOString().split('T')[0];
       const progress = await storage.createUserProgress({
         userProfileId: profile.id,
         currentWeek: 1,
@@ -33,6 +34,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         streakDays: 0,
         totalTasksCompleted: 0,
         lastCompletedDate: null,
+        startDate: today,
+        taskCompletions: {},
+        completedDates: {},
       });
       
       res.json({
@@ -93,12 +97,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const scheduleData = schedule.scheduleData as unknown as ScheduleData;
-      const currentWeek = progress.currentWeek;
       
-      // Find current week's plan
+      // Calculate which day of the learning schedule user is on
+      const startDate = progress.startDate || new Date().toISOString().split('T')[0];
+      const today = new Date();
+      const start = new Date(startDate);
+      
+      // Calculate days since start (0-indexed)
+      const daysSinceStart = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysSinceStart < 0) {
+        // Haven't started yet
+        return res.json({ tasks: [], dayOfWeek: "monday", weekGoal: "" });
+      }
+      
+      // Calculate week number (1-indexed) and day of week
+      const weekNumber = Math.floor(daysSinceStart / 7) + 1;
+      const dayIndex = daysSinceStart % 7;
+      const dayNames = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+      const dayOfWeek = dayNames[dayIndex];
+      
+      // Check if beyond schedule
+      if (weekNumber > scheduleData.totalWeeks) {
+        return res.json({ 
+          tasks: [], 
+          dayOfWeek,
+          weekGoal: "학습 계획을 모두 완료했습니다!" 
+        });
+      }
+      
+      // Find the week's plan
       let currentWeekPlan = null;
       for (const month of scheduleData.months) {
-        const week = month.weeks.find(w => w.weekNumber === currentWeek);
+        const week = month.weeks.find(w => w.weekNumber === weekNumber);
         if (week) {
           currentWeekPlan = week;
           break;
@@ -106,16 +137,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!currentWeekPlan) {
-        return res.json({ tasks: [], dayOfWeek: getTodayDayOfWeek() });
+        return res.json({ tasks: [], dayOfWeek, weekGoal: "" });
       }
       
-      // Get today's day of week
-      const todayDayOfWeek = getTodayDayOfWeek();
-      const todayPlan = currentWeekPlan.days.find(d => d.dayOfWeek === todayDayOfWeek);
+      // Get today's tasks based on learning schedule
+      const todayPlan = currentWeekPlan.days.find(d => d.dayOfWeek === dayOfWeek);
+      
+      // Add taskId to each task for completion tracking
+      const tasksWithIds = (todayPlan?.tasks || []).map((task, index) => ({
+        ...task,
+        taskId: `${weekNumber}-${dayOfWeek}-${index}`
+      }));
       
       res.json({
-        tasks: todayPlan?.tasks || [],
-        dayOfWeek: todayDayOfWeek,
+        tasks: tasksWithIds,
+        dayOfWeek,
         weekGoal: currentWeekPlan.goal,
       });
     } catch (error: any) {
@@ -294,6 +330,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching profile:", error);
       res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  // AI Chat endpoint
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { profileId, message, conversationHistory } = req.body;
+      
+      if (!profileId || !message) {
+        return res.status(400).json({ error: "Missing profileId or message" });
+      }
+      
+      const profile = await storage.getUserProfile(profileId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+      
+      // Import chatWithAI dynamically
+      const { chatWithAI } = await import("./openai");
+      
+      const response = await chatWithAI(profile, message, conversationHistory || []);
+      
+      res.json({ response });
+    } catch (error: any) {
+      console.error("Error in chat:", error);
+      res.status(500).json({ error: "Failed to process chat message" });
     }
   });
 

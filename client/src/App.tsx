@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Schedule from "@/pages/schedule";
 import Progress from "@/pages/progress";
 import Profile from "@/pages/profile";
+import Chat from "@/pages/chat";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/schedule" component={Schedule} />
+      <Route path="/chat" component={Chat} />
       <Route path="/progress" component={Progress} />
       <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
