@@ -1,6 +1,5 @@
 
 
-
 # Software Design Specification (SDS)
 
 ## LangPath - AI 기반 외국어 학습 컨설턴트 서비스
@@ -369,25 +368,8 @@
 
 ### 4.3 전체 스케줄 조회 Sequence Diagram
 사용자    →  SchedulePage  →  ScheduleService  →  Database
-│              │                   │               │
-│─ 스케줄 조회 ─→│                   │               │
-│              │─ 데이터 요청 ─────→│               │
-│              │                   │─ 조회 ───────→│
-│              │                   │←─ 12주 데이터 ─│
-│              │                   │               │
-│              │←─ 스케줄 반환 ─────│               │
-│              │                   │               │
-│← 12주 표시 ────│                   │               │
-│              │                   │               │
-│─ 과제 체크 ────→│                   │               │
-│              │─ 완료 처리 ───────→│               │
-│              │                   │─ 업데이트 ───→│
-│              │                   │←─ 완료 ───────│
-│              │←─ 동기화 완료 ─────│               │
-│              │                   │               │
-│← 화면 갱신 ────│                   │               │
 
-
+![langpath-sequence-schedule](https://github.com/user-attachments/assets/186fb6c1-ef95-4298-8098-ea0e2211599d)
 
 **설명:**
 1. 사용자가 스케줄 페이지를 조회한다
