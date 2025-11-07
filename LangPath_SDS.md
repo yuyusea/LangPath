@@ -355,24 +355,8 @@
 
 ### 4.2 과제 완료 처리 Sequence Diagram
 사용자    →  Dashboard  →  TaskService  →  ProgressService  →  Database
-│             │               │                 │               │
-│─ 체크박스 클릭 →│               │                 │               │
-│             │─ 과제 완료 ──→│                 │               │
-│             │               │─ 상태 토글 ─────→│               │
-│             │               │                 │─ 업데이트 ───→│
-│             │               │                 │←─ 완료 ───────│
-│             │               │                 │               │
-│             │               │─ 일일 완료 체크 ─→│               │
-│             │               │                 │               │
-│             │               │                 │─ 연속일수 계산 │
-│             │               │                 │               │
-│             │               │←─ 진행률 업데이트 ─│               │
-│             │               │                 │               │
-│             │←─ UI 업데이트 ──│                 │               │
-│             │               │                 │               │
-│← 화면 갱신 ────│               │                 │               │
 
-
+![langpath-sequence-task-completion](https://github.com/user-attachments/assets/e42b729c-1592-4b06-8827-3eb7ed0ec903)
 
 **설명:**
 1. 사용자가 과제 체크박스를 클릭한다
