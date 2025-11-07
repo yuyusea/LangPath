@@ -465,7 +465,7 @@
 
 ### 6.1 온보딩 화면 (1/7 단계 - 언어 선택)
 
-<img width="587" height="387" alt="온보딩 화면 (17 단계 - 언어 선택)" src="https://github.com/user-attachments/assets/1a9fb314-012b-49a5-abfc-dcea2110fcf7" />
+<img width="780" height="500" alt="온보딩 화면 (1_7 단계 - 언어 선택)" src="https://github.com/user-attachments/assets/75246999-2c37-4953-81df-e46217b5301d" />
 
 **화면 설명:**  
 사용자가 학습하고자 하는 외국어를 선택하는 첫 번째 온보딩 화면이다.
@@ -507,7 +507,7 @@
 
 ### 6.2 온보딩 화면 (2/7 단계 - 현재 수준)
 
-<img width="611" height="363" alt="보딩 화면 (27 단계 - 현재 수준)" src="https://github.com/user-attachments/assets/c87f94d6-2829-4d5f-ab3c-79ae98a26038" />
+<img width="780" height="450" alt="온보딩 화면 (2_7 단계 - 현재 수준)" src="https://github.com/user-attachments/assets/0da2298f-2ea2-4f80-bbeb-847ef672c3d7" />
 
 **화면 설명:**  
 사용자의 현재 언어 수준을 선택하는 두 번째 온보딩 화면이다.
@@ -546,7 +546,7 @@
 
 ### 6.3 온보딩 화면 (3/7 단계 - 학습 목표)
 
-<img width="627" height="368" alt="온보딩 화면 (37 단계 - 학습 목표)" src="https://github.com/user-attachments/assets/f4c8ecdf-3c41-49df-b347-a65d1712bb42" />
+<img width="780" height="450" alt="온보딩 화면 (3_7 단계 - 학습 목표)" src="https://github.com/user-attachments/assets/03579877-d9a4-48e9-9c05-77649767af31" />
 
 **화면 설명:**  
 사용자의 학습 목표를 선택하는 세 번째 온보딩 화면이다.
@@ -585,6 +585,8 @@
 
 ### 6.4 온보딩 화면 (4/7 단계 - 목표 기간)
 
+<img width="765" height="450" alt="6 4 온보딩 화면 (4_7 단계 - 목표 기간)" src="https://github.com/user-attachments/assets/ffce6708-bc30-427d-a005-6e52745e446c" />
+
 **화면 설명:**  
 사용자의 목표 달성 기간을 선택하는 네 번째 온보딩 화면이다.
 
@@ -622,6 +624,8 @@
 
 ### 6.5 온보딩 화면 (5/7 단계 - 일일 학습 시간)
 
+<img width="780" height="430" alt="온보딩 화면 (5_7 단계 일일 학습 시간)" src="https://github.com/user-attachments/assets/9e2e9fee-d0e5-462e-a3e0-a49bca86fe9f" />
+
 **화면 설명:**  
 사용자의 하루 학습 가능 시간을 선택하는 다섯 번째 온보딩 화면이다.
 
@@ -657,6 +661,8 @@
 ---
 
 ### 6.6 온보딩 화면 (6/7 단계 - 학습 방식)
+
+<img width="780" height="450" alt="온보딩 화면 (6_7 단계 학습 방식)" src="https://github.com/user-attachments/assets/965ce786-7054-4099-af20-84a450e6319c" />
 
 **화면 설명:**  
 사용자가 선호하는 학습 방식을 선택하는 여섯 번째 온보딩 화면이다.
@@ -697,6 +703,8 @@
 
 **화면 설명:**  
 사용자의 가장 약한 부분을 선택하는 마지막 온보딩 화면이다.
+
+<img width="765" height="702" alt="온보딩 화면 (7_7 단계 약점)" src="https://github.com/user-attachments/assets/f3ee47c1-b504-46f3-8e48-db1134952e2e" />
 
 #### 화면 구성
 
