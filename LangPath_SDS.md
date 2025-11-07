@@ -618,7 +618,7 @@
 
 ### 6.6 온보딩 화면 (6/7 단계 - 학습 방식)
 
-<img width="780" height="450" alt="온보딩 화면 (6_7 단계 학습 방식)" src="https://github.com/user-attachments/assets/965ce786-7054-4099-af20-84a450e6319c" />
+<img width="755" height="450" alt="온보딩 화면 (6_7 단계 학습 방식)" src="https://github.com/user-attachments/assets/96a99acd-b23d-403a-a907-90291cc9a82c" />
 
 **화면 설명:**  
 선호하는 학습 방식을 선택하는 화면이다.
@@ -651,7 +651,7 @@
 **화면 설명:**  
 사용자의 가장 약한 부분을 선택하는 마지막 온보딩 화면이다.
 
-<img width="755" height="450" alt="온보딩 화면 (7_7 단계 약점)" src="https://github.com/user-attachments/assets/dbc2f617-56cb-494e-9a02-cdf4d024c012" />
+<img width="780" height="450" alt="온보딩 화면 (7_7 단계 약점)" src="https://github.com/user-attachments/assets/a886194e-61fa-4f86-a80b-ca961764f8d0" />
 
 **화면 설명:**  
 가장 약한 부분을 선택하는 마지막 온보딩 화면이다.
