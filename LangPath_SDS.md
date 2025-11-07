@@ -1,4 +1,3 @@
-
 # Software Design Specification (SDS)
 
 ## LangPath - AI 기반 외국어 학습 컨설턴트 서비스
@@ -465,6 +464,8 @@
 ---
 
 ### 6.1 온보딩 화면 (1/7 단계 - 언어 선택)
+
+<img width="865" height="772" alt="온보딩 화면 (17 단계 - 언어 선택)" src="https://github.com/user-attachments/assets/8d1e58aa-a180-43b9-892c-13dd581bb196" />
 
 **화면 설명:**  
 사용자가 학습하고자 하는 외국어를 선택하는 첫 번째 온보딩 화면이다.
