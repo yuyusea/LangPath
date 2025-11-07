@@ -904,6 +904,8 @@ AI가 맞춤형 학습 계획을 생성하는 동안 표시되는 로딩 화면�
 
 ### 6.12 AI 챗봇 화면
 
+<img width="887" height="756" alt="AI 챗봇 화면" src="https://github.com/user-attachments/assets/614d08bb-22dd-456d-892b-a91e83ea7fb5" />
+
 **화면 설명:**  
 학습 관련 질문에 AI가 답변하는 화면이다.
 
@@ -943,6 +945,8 @@ AI가 맞춤형 학습 계획을 생성하는 동안 표시되는 로딩 화면�
 ---
 
 ### 6.13 프로필 화면
+
+<img width="895" height="1448" alt="프로필 화면" src="https://github.com/user-attachments/assets/6381545a-9a44-484f-b0f3-eb0d8297cbd1" />
 
 **화면 설명:**  
 학습 프로필 정보를 조회하고 재설정하는 화면이다.
