@@ -742,6 +742,8 @@
 
 ### 6.8 AI 생성 로딩 화면
 
+<img width="630" height="350" alt="AI 생성 로딩 화면" src="https://github.com/user-attachments/assets/769efb17-b45f-4999-9943-310deec73240" />
+
 **화면 설명:**  
 AI가 맞춤형 학습 계획을 생성하는 동안 표시되는 로딩 화면이다.
 
