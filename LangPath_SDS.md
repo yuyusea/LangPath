@@ -1,5 +1,4 @@
 
-
 # Software Design Specification (SDS)
 
 ## LangPath - AI 기반 외국어 학습 컨설턴트 서비스
@@ -422,35 +421,8 @@
 ---
 
 ### 5.2 서버 State Machine Diagram
-[서버 시작]
-│
-▼
-┌──────────┐
-│  Idle    │ ← 요청 처리 완료
-└──────────┘
-│ 클라이언트 요청
-▼
-┌──────────┐
-│Processing│
-└──────────┘
-│
-├─ 프로필 저장 요청 ──→ [DB Write] ──→ [Idle]
-│
-├─ 스케줄 생성 요청 ──→ [AI API Call] ──→ [DB Write] ──→ [Idle]
-│
-├─ 데이터 조회 요청 ──→ [DB Read] ──→ [Idle]
-│
-├─ 과제 완료 요청 ───→ [DB Update] ──→ [Idle]
-│
-└─ 에러 발생 ────────→ [Error Handling] ──→ [Idle]
 
-[DB Write/Read/Update]
-│
-├─ 성공 ──→ Response 전송
-│
-└─ 실패 ──→ [Retry] ──→ [Error Response]
-
-
+![langpath-state-machine-server](https://github.com/user-attachments/assets/47b76850-fe88-40a7-964c-9ccc66c9c365)
 
 **상태 설명:**
 
