@@ -21,19 +21,19 @@ export function BottomNav() {
           const Icon = item.icon;
 
           return (
-            <Link key={item.path} href={item.path}>
-              <a
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-md transition-colors min-w-[64px]",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover-elevate"
-                )}
-                data-testid={item.testId}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{item.label}</span>
-              </a>
+            <Link 
+              key={item.path} 
+              href={item.path}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-md transition-colors min-w-[64px]",
+                isActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover-elevate"
+              )}
+              data-testid={item.testId}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-xs font-medium">{item.label}</span>
             </Link>
           );
         })}

@@ -29,19 +29,19 @@ export function TopNav() {
               const Icon = item.icon;
 
               return (
-                <Link key={item.path} href={item.path}>
-                  <a
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-md transition-colors",
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover-elevate"
-                    )}
-                    data-testid={item.testId}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-sm font-medium">{item.label}</span>
-                  </a>
+                <Link 
+                  key={item.path} 
+                  href={item.path}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover-elevate"
+                  )}
+                  data-testid={item.testId}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-sm font-medium">{item.label}</span>
                 </Link>
               );
             })}
