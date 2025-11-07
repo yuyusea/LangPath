@@ -5,7 +5,7 @@
 **Team Information:**
 - Student ID: 21821469
 - Name: 정창화
-- E-mail: [이메일 주소]
+- E-mail: [wkdghkwjd07@yu.ac.kr]
 
 ---
 
