@@ -704,7 +704,7 @@
 **화면 설명:**  
 사용자의 가장 약한 부분을 선택하는 마지막 온보딩 화면이다.
 
-<img width="765" height="702" alt="온보딩 화면 (7_7 단계 약점)" src="https://github.com/user-attachments/assets/f3ee47c1-b504-46f3-8e48-db1134952e2e" />
+<img width="755" height="450" alt="온보딩 화면 (7_7 단계 약점)" src="https://github.com/user-attachments/assets/dbc2f617-56cb-494e-9a02-cdf4d024c012" />
 
 #### 화면 구성
 
