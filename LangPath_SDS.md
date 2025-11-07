@@ -1,5 +1,3 @@
-![langpath-usecase-diagram](https://github.com/user-attachments/assets/aab5a305-f165-4828-a447-bfb621d968ff)# Software Design Specification (SDS)
-
 ## LangPath - AI 기반 외국어 학습 컨설턴트 서비스
 
 **Team Information:**
@@ -78,6 +76,7 @@
 |--- (8. 프로필 관리)
 |--- (9. 페이지 이동)
 
+![langpath-usecase-diagram](https://github.com/user-attachments/assets/aab5a305-f165-4828-a447-bfb621d968ff)# Software Design Specification (SDS)
 ![Uploading l<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
