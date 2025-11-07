@@ -1,3 +1,5 @@
+# Software Design Specification (SDS)
+
 ## LangPath - AI 기반 외국어 학습 컨설턴트 서비스
 
 **Team Information:**
@@ -235,21 +237,8 @@
 ## 3. Class diagram
 
 ### 주요 클래스 다이어그램
-┌─────────────────────┐ │ UserProfile │ ├─────────────────────┤ │ - id: string │ │ - language: string │ │ - level: string │ │ - goal: string │ │ - duration: string │ │ - dailyTime: string │ │ - studyMethod: string│ │ - weakness: string │ │ - startDate: Date │ ├─────────────────────┤ │ + createProfile() │ │ + updateProfile() │ │ + getProfile() │ └─────────────────────┘ │ │ 1:1 ▼ ┌─────────────────────┐ │ LearningSchedule │ ├─────────────────────┤ │ - userId: string │ │ - weeks: Week[] │ ├─────────────────────┤ │ + generateSchedule()│ │ + getWeek(number) │ │ + getAllWeeks() │ └─────────────────────┘ │ │ 1:N ▼ ┌─────────────────────┐ │ Week │ ├─────────────────────┤ │ - weekNumber: number│ │ - theme: string │ │ - days: DailyTask[] │ ├─────────────────────┤ │ + getTasks() │ │ + getProgress() │ └─────────────────────┘ │ │ 1:N ▼ ┌─────────────────────┐ │ DailyTask │ ├─────────────────────┤ │ - day: string │ │ - tasks: Task[] │ ├─────────────────────┤ │ + addTask() │ │ + removeTask() │ │ + getTasks() │ └─────────────────────┘ │ │ 1:N ▼ ┌─────────────────────┐ │ Task │ ├─────────────────────┤ │ - id: string │ │ - title: string │ │ - details: string[] │ │ - duration: string │ │ - completed: boolean│ ├─────────────────────┤ │ + toggleComplete() │ │ + isCompleted() │ └─────────────────────┘
 
-┌─────────────────────┐
-│   UserProgress      │
-├─────────────────────┤
-│ - userId: string    │
-│ - completedDates: Date[]│
-│ - completedTasks: string[]│
-│ - currentStreak: number│
-├─────────────────────┤
-│ + updateProgress()  │
-│ + calculateStreak() │
-│ + getWeeklyProgress()│
-└─────────────────────┘
-
+![langpath-class-diagram](https://github.com/user-attachments/assets/1a58f06d-c3d4-4fb3-a253-d8823e81064e)## LangPath - AI 기반 외국어 학습 컨설턴트 서비스
 
 
 ### 클래스 상세 설명
