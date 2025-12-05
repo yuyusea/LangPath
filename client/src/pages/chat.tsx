@@ -7,19 +7,67 @@ import { BottomNav } from "@/components/BottomNav";
 import { Bot, Send, Sparkles, Loader2 } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import type { UserProfile } from "@shared/schema";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
-const SAMPLE_QUESTIONS = [
-  "히라가나를 빨리 외우는 방법이 있을까요?",
-  "일본어 조사 は와 が의 차이가 뭔가요?",
-  "오늘 학습한 내용을 복습하는 방법을 알려주세요",
-];
+function getSampleQuestions(language: string): string[] {
+  switch (language) {
+    case "japanese":
+      return [
+        "히라가나를 빨리 외우는 방법이 있을까요?",
+        "일본어 조사 は와 が의 차이가 뭔가요?",
+        "일본어 경어 표현은 어떻게 공부해야 할까요?",
+      ];
+    case "english":
+      return [
+        "영어 발음을 향상시키는 방법이 있을까요?",
+        "영어 관사 a와 the의 차이가 뭔가요?",
+        "영어 회화 실력을 빠르게 늘리려면 어떻게 해야 할까요?",
+      ];
+    case "chinese":
+      return [
+        "중국어 성조를 정확하게 발음하는 방법이 있을까요?",
+        "간체자와 번체자의 차이가 뭔가요?",
+        "중국어 한자를 효과적으로 외우는 방법을 알려주세요",
+      ];
+    case "spanish":
+      return [
+        "스페인어 동사 변형을 쉽게 외우는 방법이 있을까요?",
+        "스페인어 ser와 estar의 차이가 뭔가요?",
+        "스페인어 발음에서 주의할 점이 있을까요?",
+      ];
+    case "french":
+      return [
+        "프랑스어 발음을 향상시키는 방법이 있을까요?",
+        "프랑스어 남성/여성 명사를 구분하는 팁이 있을까요?",
+        "프랑스어 동사 활용을 효과적으로 외우는 방법을 알려주세요",
+      ];
+    case "german":
+      return [
+        "독일어 격변화를 쉽게 외우는 방법이 있을까요?",
+        "독일어 관사 der, die, das의 차이가 뭔가요?",
+        "독일어 복합 명사를 이해하는 방법을 알려주세요",
+      ];
+    case "korean":
+      return [
+        "한글을 빨리 외우는 방법이 있을까요?",
+        "한국어 존댓말과 반말의 차이가 뭔가요?",
+        "한국어 조사 은/는과 이/가의 차이를 알려주세요",
+      ];
+    default:
+      return [
+        "효과적인 언어 학습 방법을 알려주세요",
+        "단어를 오래 기억하는 방법이 있을까요?",
+        "오늘 학습한 내용을 복습하는 방법을 알려주세요",
+      ];
+  }
+}
 
 export default function Chat() {
   const { profileId, hasProfile } = useUserProfile();
@@ -32,6 +80,13 @@ export default function Chat() {
   ]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: profile } = useQuery<UserProfile>({
+    queryKey: ["/api/profile", profileId],
+    enabled: !!profileId,
+  });
+
+  const sampleQuestions = getSampleQuestions(profile?.language || "");
 
   useEffect(() => {
     if (!hasProfile) {
@@ -158,7 +213,7 @@ export default function Chat() {
           <div className="mb-4 space-y-2">
             <p className="text-xs text-muted-foreground">추천 질문:</p>
             <div className="flex flex-wrap gap-2">
-              {SAMPLE_QUESTIONS.map((question, index) => (
+              {sampleQuestions.map((question, index) => (
                 <Button
                   key={index}
                   variant="outline"
