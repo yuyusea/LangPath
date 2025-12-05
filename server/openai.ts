@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import pRetry, { AbortError } from "p-retry";
-import type { InsertUserProfile, ScheduleData } from "@shared/schema";
+import type { InsertUserProfile, ScheduleData, MonthPlan, WeekPlan, DayPlan, Task } from "@shared/schema";
 import { LANGUAGE_OPTIONS } from "@shared/schema";
 
 // This is using Replit's AI Integrations service, which provides OpenAI-compatible API access without requiring your own OpenAI API key.
@@ -32,90 +32,161 @@ function getLanguageLabel(languageValue: string): string {
   return option?.label || languageValue;
 }
 
-// Language-specific mock schedules
+// Convert deadline to total weeks
+function getWeeksFromDeadline(deadline: string): number {
+  switch (deadline) {
+    case "1month": return 4;
+    case "3months": return 12;
+    case "6months": return 24;
+    case "flexible": return 12;
+    default: return 12;
+  }
+}
+
+// Language-specific curriculum templates
+const LANGUAGE_CURRICULUM: { [key: string]: { phases: { name: string; weeks: number; topics: string[] }[] } } = {
+  japanese: {
+    phases: [
+      { name: "문자 기초", weeks: 4, topics: ["히라가나 あ~な행", "히라가나 は~わ행", "가타카나 ア~ナ행", "가타카나 ハ~ワ행"] },
+      { name: "기초 문법", weeks: 4, topics: ["기본 조사(は, が, を, に)", "동사 ます형", "형용사 활용", "숫자와 시간 표현"] },
+      { name: "회화 기초", weeks: 4, topics: ["자기소개", "일상 회화", "쇼핑/식당 표현", "존경어 기초"] },
+      { name: "문법 심화", weeks: 4, topics: ["동사 て형", "동사 た형", "~たい 표현", "조건문 기초"] },
+      { name: "독해/청해", weeks: 4, topics: ["간단한 문장 읽기", "JLPT N5 문제풀이", "애니메이션 청취", "종합 복습"] },
+      { name: "실전 연습", weeks: 4, topics: ["롤플레이 회화", "작문 연습", "시험 대비", "종합 정리"] }
+    ]
+  },
+  english: {
+    phases: [
+      { name: "발음과 기초", weeks: 4, topics: ["알파벳과 발음 규칙", "be동사 완전 정복", "일반동사 현재형", "기본 의문문"] },
+      { name: "시제와 문법", weeks: 4, topics: ["과거형 학습", "미래형 학습", "현재진행형", "조동사 can, will"] },
+      { name: "회화 기초", weeks: 4, topics: ["일상 대화", "전화/이메일 영어", "여행 영어", "쇼핑/식당 영어"] },
+      { name: "문법 심화", weeks: 4, topics: ["현재완료", "수동태", "관계대명사", "가정법 기초"] },
+      { name: "독해/청해", weeks: 4, topics: ["뉴스 기사 읽기", "팟캐스트 청취", "영화/드라마 표현", "토익 문제풀이"] },
+      { name: "비즈니스 영어", weeks: 4, topics: ["프레젠테이션", "미팅 영어", "협상 표현", "종합 정리"] }
+    ]
+  },
+  chinese: {
+    phases: [
+      { name: "발음과 성조", weeks: 4, topics: ["성모/운모 기초", "4성 완전 정복", "성조 변화 규칙", "병음 실전 연습"] },
+      { name: "기초 문법", weeks: 4, topics: ["是, 有, 在 동사", "기본 어순", "양사 학습", "시간/날짜 표현"] },
+      { name: "한자 학습", weeks: 4, topics: ["HSK 1급 한자", "HSK 2급 한자", "필순 연습", "한자 조합 이해"] },
+      { name: "회화 기초", weeks: 4, topics: ["자기소개", "일상 대화", "길 찾기", "쇼핑/식당 표현"] },
+      { name: "문법 심화", weeks: 4, topics: ["把 구문", "被 구문", "보어 학습", "복문 구조"] },
+      { name: "실전 연습", weeks: 4, topics: ["HSK 문제풀이", "중국 드라마 청취", "작문 연습", "종합 정리"] }
+    ]
+  },
+  spanish: {
+    phases: [
+      { name: "발음과 기초", weeks: 4, topics: ["알파벳과 발음", "명사의 성/수", "관사 사용법", "기본 인사말"] },
+      { name: "동사 기초", weeks: 4, topics: ["Ser vs Estar", "-ar 동사 활용", "-er/-ir 동사 활용", "불규칙 동사"] },
+      { name: "문법 심화", weeks: 4, topics: ["과거형 (Preterito)", "미래형", "전치사", "대명사"] },
+      { name: "회화 기초", weeks: 4, topics: ["일상 대화", "여행 스페인어", "전화 표현", "의견 표현"] },
+      { name: "접속법", weeks: 4, topics: ["접속법 현재", "접속법 과거", "조건문", "복합 문장"] },
+      { name: "실전 연습", weeks: 4, topics: ["DELE 문제풀이", "원어민 콘텐츠", "작문 연습", "종합 정리"] }
+    ]
+  },
+  french: {
+    phases: [
+      { name: "발음과 기초", weeks: 4, topics: ["알파벳과 발음", "비음 모음", "리에종 규칙", "기본 인사말"] },
+      { name: "문법 기초", weeks: 4, topics: ["명사와 관사", "형용사 위치", "Etre/Avoir 동사", "의문문 만들기"] },
+      { name: "동사 활용", weeks: 4, topics: ["-er 동사 현재형", "-ir/-re 동사", "과거형 (Passe compose)", "반과거"] },
+      { name: "회화 기초", weeks: 4, topics: ["자기소개", "일상 대화", "쇼핑/식당", "길 찾기"] },
+      { name: "문법 심화", weeks: 4, topics: ["대명사", "접속법 기초", "조건문", "관계대명사"] },
+      { name: "실전 연습", weeks: 4, topics: ["DELF 문제풀이", "프랑스 영화", "작문 연습", "종합 정리"] }
+    ]
+  }
+};
+
+// Generate language-specific mock schedules with full duration
 function generateMockSchedule(profile: InsertUserProfile): ScheduleData {
   console.log("[OpenAI] Using mock schedule data as fallback");
   
   const languageLabel = getLanguageLabel(profile.language);
+  const totalWeeks = getWeeksFromDeadline(profile.deadline);
+  const curriculum = LANGUAGE_CURRICULUM[profile.language] || LANGUAGE_CURRICULUM.english;
   
-  const languageSpecific: { [key: string]: any } = {
-    japanese: {
-      week1Goal: "히라가나 완전 정복",
-      monday: [
-        { title: "히라가나 あ행 학습", duration: "20분", details: ["あいうえお 쓰기 연습", "발음 듣고 따라하기"] },
-        { title: "일본어 기본 인사", duration: "10분", details: ["こんにちは、ありがとう 등 인사말 학습"] }
-      ],
-      tuesday: [
-        { title: "히라가나 か행 학습", duration: "20분", details: ["かきくけこ 쓰기 연습", "탁음과 반탁음 이해"] },
-        { title: "숫자 세기", duration: "10분", details: ["1~10까지 일본어로 세기"] }
-      ]
-    },
-    english: {
-      week1Goal: "영어 기초 문법과 발음",
-      monday: [
-        { title: "영어 알파벳과 발음", duration: "20분", details: ["A-M 발음 연습", "모음 발음 차이 학습"] },
-        { title: "기본 인사 표현", duration: "10분", details: ["Hello, How are you? 등 표현 학습"] }
-      ],
-      tuesday: [
-        { title: "영어 알파벳 복습", duration: "20분", details: ["N-Z 발음 연습", "자음 발음 차이 학습"] },
-        { title: "be동사 이해", duration: "10분", details: ["I am, You are 문장 만들기"] }
-      ]
-    },
-    chinese: {
-      week1Goal: "병음과 성조 기초",
-      monday: [
-        { title: "병음 학습 (1성~2성)", duration: "20분", details: ["ā á 성조 구분 연습", "기본 모음 발음"] },
-        { title: "간단한 인사말", duration: "10분", details: ["你好(nǐhǎo) 발음과 성조 연습"] }
-      ],
-      tuesday: [
-        { title: "병음 학습 (3성~4성)", duration: "20분", details: ["ǎ à 성조 구분 연습", "성조 변화 규칙"] },
-        { title: "숫자 세기", duration: "10분", details: ["1~10까지 중국어 숫자와 성조"] }
-      ]
-    },
-    spanish: {
-      week1Goal: "스페인어 발음과 기초 문법",
-      monday: [
-        { title: "스페인어 알파벳", duration: "20분", details: ["A-M 발음 연습", "ñ, ll 특수 발음 학습"] },
-        { title: "인사 표현", duration: "10분", details: ["Hola, Buenos días 등 인사말"] }
-      ],
-      tuesday: [
-        { title: "알파벳 복습", duration: "20분", details: ["N-Z 발음 연습", "롤링 R 발음 연습"] },
-        { title: "명사의 성", duration: "10분", details: ["남성명사와 여성명사 구분"] }
-      ]
-    },
-    french: {
-      week1Goal: "프랑스어 발음과 알파벳",
-      monday: [
-        { title: "프랑스어 알파벳", duration: "20분", details: ["A-M 발음 연습", "비음 모음 이해"] },
-        { title: "인사 표현", duration: "10분", details: ["Bonjour, Merci 등 기본 표현"] }
-      ],
-      tuesday: [
-        { title: "알파벳 복습", duration: "20분", details: ["N-Z 발음 연습", "리에종 규칙 학습"] },
-        { title: "명사와 관사", duration: "10분", details: ["le, la, un, une 사용법"] }
-      ]
+  const dayNames: Array<"monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"> = 
+    ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+  
+  const weekdayActivities = ["새 내용 학습", "어휘 학습", "문법 연습", "듣기 연습", "말하기 연습"];
+  const weekendActivities = ["주간 복습", "종합 정리"];
+  
+  const months: MonthPlan[] = [];
+  let weekCounter = 1;
+  let phaseIndex = 0;
+  
+  const totalMonths = Math.ceil(totalWeeks / 4);
+  
+  for (let monthNum = 1; monthNum <= totalMonths; monthNum++) {
+    const weeksInMonth: WeekPlan[] = [];
+    const monthStartWeek = weekCounter;
+    
+    for (let w = 0; w < 4 && weekCounter <= totalWeeks; w++) {
+      const currentPhase = curriculum.phases[phaseIndex % curriculum.phases.length];
+      const topicIndex = w % currentPhase.topics.length;
+      const currentTopic = currentPhase.topics[topicIndex];
+      
+      const days: DayPlan[] = dayNames.map((day, dayIndex) => {
+        const isWeekend = dayIndex >= 5;
+        const activity = isWeekend 
+          ? weekendActivities[dayIndex - 5]
+          : weekdayActivities[dayIndex];
+        
+        const tasks: Task[] = [];
+        
+        if (isWeekend) {
+          tasks.push({
+            title: `${currentTopic} 복습`,
+            duration: "30분",
+            details: [`${weekCounter}주차 학습 내용 정리`, "핵심 포인트 복습"]
+          });
+          if (dayIndex === 6) {
+            tasks.push({
+              title: "주간 테스트",
+              duration: "20분",
+              details: ["주간 학습 확인 퀴즈", "오답 노트 정리"]
+            });
+          }
+        } else {
+          tasks.push({
+            title: `${currentTopic} - ${activity}`,
+            duration: "20분",
+            details: [`${currentTopic} ${activity}`, `${languageLabel} 실력 향상`]
+          });
+          tasks.push({
+            title: "오늘의 단어/표현",
+            duration: "10분",
+            details: ["새 단어 5개 암기", "예문 작성 연습"]
+          });
+        }
+        
+        return { dayOfWeek: day, tasks };
+      });
+      
+      weeksInMonth.push({
+        weekNumber: weekCounter,
+        goal: `${currentTopic}`,
+        days
+      });
+      
+      weekCounter++;
+      
+      if (weekCounter > monthStartWeek + 3) {
+        phaseIndex++;
+      }
     }
-  };
-
-  const langData = languageSpecific[profile.language] || languageSpecific.english;
+    
+    const monthPhase = curriculum.phases[Math.min(phaseIndex, curriculum.phases.length - 1)];
+    months.push({
+      monthNumber: monthNum,
+      goal: `${languageLabel} ${monthPhase.name}`,
+      weeks: weeksInMonth
+    });
+  }
 
   return {
-    months: [
-      {
-        monthNumber: 1,
-        goal: `${languageLabel} 기초 다지기`,
-        weeks: [
-          {
-            weekNumber: 1,
-            goal: langData.week1Goal,
-            days: [
-              { dayOfWeek: "monday", tasks: langData.monday },
-              { dayOfWeek: "tuesday", tasks: langData.tuesday }
-            ]
-          }
-        ]
-      }
-    ],
-    totalWeeks: 12
+    months,
+    totalWeeks
   };
 }
 
