@@ -366,6 +366,278 @@ JSON 형식으로 출력해주세요:
   }
 }
 
+// Book-based schedule generation
+export interface BookProfile {
+  bookTitle: string;
+  tableOfContents: string;
+  tocImageBase64?: string;
+  language: string;
+  dailyTime: string;
+  deadline: string;
+}
+
+export async function generateBookSchedule(bookProfile: BookProfile): Promise<ScheduleData> {
+  const totalWeeks = getWeeksFromDeadline(bookProfile.deadline);
+  const languageLabel = getLanguageLabel(bookProfile.language);
+  
+  const dailyTimeMinutes: { [key: string]: number } = {
+    "15min": 15,
+    "30min": 30,
+    "1hour": 60,
+    "2hours": 120,
+  };
+  const timePerDay = dailyTimeMinutes[bookProfile.dailyTime] || 30;
+
+  // If we have TOC image, try to extract text first
+  let tableOfContents = bookProfile.tableOfContents;
+  
+  if (bookProfile.tocImageBase64 && !tableOfContents) {
+    try {
+      console.log("[OpenAI] Extracting text from TOC image...");
+      const extractedText = await extractTextFromImage(bookProfile.tocImageBase64);
+      if (extractedText) {
+        tableOfContents = extractedText;
+        console.log("[OpenAI] Successfully extracted TOC text from image");
+      }
+    } catch (error) {
+      console.error("[OpenAI] Failed to extract text from image:", error);
+    }
+  }
+
+  const prompt = `당신은 ${languageLabel} 학습 전문 컨설턴트입니다. 아래 교재의 목차를 분석하여 ${totalWeeks}주 학습 스케줄을 만들어주세요.
+
+[교재 정보]
+- 교재명: ${bookProfile.bookTitle}
+- 학습 언어: ${languageLabel}
+
+[목차 내용]
+${tableOfContents}
+
+[학습 조건]
+- 총 학습 기간: ${totalWeeks}주
+- 하루 학습 시간: ${timePerDay}분
+- 월요일~금요일: 새 내용 학습
+- 토요일: 주간 복습
+- 일요일: 연습 및 정리
+
+[요구사항]
+1. 목차의 각 과/장을 ${totalWeeks}주에 걸쳐 적절히 분배
+2. 각 주차마다 학습할 과/장을 명확히 지정
+3. 주어진 일일 학습 시간(${timePerDay}분) 내 완료 가능하게 구성
+4. 앞 과에서 배운 내용이 뒷 과 학습에 도움이 되도록 순차적 구성
+5. 각 과/장마다 구체적인 학습 과제 제시:
+   - 어휘 학습
+   - 문법 포인트
+   - 연습 문제
+   - 활용 연습
+
+JSON 형식으로 출력:
+{
+  "months": [
+    {
+      "monthNumber": 1,
+      "goal": "1개월차 목표 (예: 1~3과 완료)",
+      "weeks": [
+        {
+          "weekNumber": 1,
+          "goal": "1주차: 1과 - [과 제목]",
+          "days": [
+            {
+              "dayOfWeek": "monday",
+              "tasks": [
+                {
+                  "title": "1과 어휘 학습",
+                  "duration": "${timePerDay}분",
+                  "details": ["새 단어 암기", "발음 연습"]
+                }
+              ]
+            },
+            {
+              "dayOfWeek": "tuesday",
+              "tasks": [...]
+            },
+            ... (모든 요일 포함)
+          ]
+        }
+      ]
+    }
+  ],
+  "totalWeeks": ${totalWeeks}
+}`;
+
+  try {
+    const scheduleData = await pRetry(
+      async () => {
+        try {
+          const response = await openai.chat.completions.create({
+            model: "gpt-5",
+            messages: [
+              {
+                role: "system",
+                content: "You are an expert language learning consultant. Create detailed study schedules based on textbook table of contents. Always respond in Korean with valid JSON."
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            response_format: { type: "json_object" },
+            max_completion_tokens: 8192,
+          });
+
+          const content = response.choices[0]?.message?.content;
+          if (!content) {
+            throw new Error("No response from OpenAI");
+          }
+
+          const parsedData: ScheduleData = JSON.parse(content);
+          
+          if (!parsedData.months || !Array.isArray(parsedData.months)) {
+            throw new Error("Invalid schedule format from OpenAI");
+          }
+
+          return parsedData;
+        } catch (error: any) {
+          console.error("OpenAI API attempt failed:", error);
+          if (isRateLimitError(error)) {
+            throw error;
+          }
+          throw new AbortError(error);
+        }
+      },
+      {
+        retries: 5,
+        minTimeout: 2000,
+        maxTimeout: 64000,
+        factor: 2,
+        onFailedAttempt: (error) => {
+          console.log(`Attempt ${error.attemptNumber} failed. ${error.retriesLeft} retries left.`);
+        },
+      }
+    );
+
+    return scheduleData;
+  } catch (error) {
+    console.error("[OpenAI] Failed to generate book schedule, using fallback:", error);
+    return generateBookMockSchedule(bookProfile, totalWeeks, languageLabel);
+  }
+}
+
+// Extract text from image using OpenAI Vision
+async function extractTextFromImage(base64Image: string): Promise<string> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "이 이미지는 외국어 교재의 목차입니다. 목차 내용을 텍스트로 추출해주세요. 과/장 번호와 제목을 포함해서 순서대로 나열해주세요."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: base64Image,
+                detail: "high"
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 2000,
+    });
+
+    return response.choices[0]?.message?.content || "";
+  } catch (error) {
+    console.error("[OpenAI] Image text extraction error:", error);
+    throw error;
+  }
+}
+
+// Fallback mock schedule for book-based learning
+function generateBookMockSchedule(bookProfile: BookProfile, totalWeeks: number, languageLabel: string): ScheduleData {
+  console.log("[OpenAI] Generating book mock schedule as fallback");
+  
+  const dayNames: Array<"monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"> = 
+    ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+  
+  // Parse chapters from table of contents
+  const chapters = bookProfile.tableOfContents
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && /^\d|^[IVX]|^[가-힣]|^[a-zA-Z]/.test(line))
+    .slice(0, Math.max(totalWeeks * 2, 20));
+  
+  const chaptersPerWeek = Math.max(1, Math.ceil(chapters.length / totalWeeks));
+  
+  const months: MonthPlan[] = [];
+  let weekCounter = 1;
+  let chapterIndex = 0;
+  const totalMonths = Math.ceil(totalWeeks / 4);
+  
+  for (let monthNum = 1; monthNum <= totalMonths; monthNum++) {
+    const weeksInMonth: WeekPlan[] = [];
+    
+    for (let w = 0; w < 4 && weekCounter <= totalWeeks; w++) {
+      const weekChapters = chapters.slice(chapterIndex, chapterIndex + chaptersPerWeek);
+      const weekGoal = weekChapters.length > 0 
+        ? weekChapters[0].substring(0, 30) 
+        : `${weekCounter}주차 학습`;
+      
+      const days: DayPlan[] = dayNames.map((day, dayIndex) => {
+        const isWeekend = dayIndex >= 5;
+        const tasks: Task[] = [];
+        
+        if (isWeekend) {
+          tasks.push({
+            title: dayIndex === 5 ? "주간 복습" : "연습 및 정리",
+            duration: "30분",
+            details: [
+              `${weekCounter}주차 학습 내용 복습`,
+              "핵심 표현 암기 확인"
+            ]
+          });
+        } else {
+          const currentChapter = weekChapters[dayIndex % weekChapters.length] || weekGoal;
+          const activities = ["어휘 학습", "문법 학습", "듣기 연습", "말하기 연습", "연습 문제"];
+          
+          tasks.push({
+            title: `${currentChapter.substring(0, 20)} - ${activities[dayIndex]}`,
+            duration: "20분",
+            details: [`${bookProfile.bookTitle} 교재 학습`, `${languageLabel} 실력 향상`]
+          });
+          tasks.push({
+            title: "복습 및 암기",
+            duration: "10분",
+            details: ["오늘 배운 표현 복습", "단어 암기"]
+          });
+        }
+        
+        return { dayOfWeek: day, tasks };
+      });
+      
+      weeksInMonth.push({
+        weekNumber: weekCounter,
+        goal: weekGoal,
+        days
+      });
+      
+      weekCounter++;
+      chapterIndex += chaptersPerWeek;
+    }
+    
+    months.push({
+      monthNumber: monthNum,
+      goal: `${bookProfile.bookTitle} ${monthNum}개월차`,
+      weeks: weeksInMonth
+    });
+  }
+
+  return { months, totalWeeks };
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;

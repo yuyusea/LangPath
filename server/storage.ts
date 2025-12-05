@@ -20,6 +20,7 @@ export interface IStorage {
   // Learning Schedule
   createLearningSchedule(schedule: InsertLearningSchedule): Promise<LearningSchedule>;
   getLearningSchedule(userProfileId: string): Promise<LearningSchedule | undefined>;
+  updateLearningSchedule(userProfileId: string, scheduleData: ScheduleData): Promise<LearningSchedule>;
   
   // User Progress
   createUserProgress(progress: InsertUserProgress): Promise<UserProgress>;
@@ -59,6 +60,20 @@ export class DatabaseStorage implements IStorage {
       .from(learningSchedules)
       .where(eq(learningSchedules.userProfileId, userProfileId));
     return schedule || undefined;
+  }
+
+  async updateLearningSchedule(userProfileId: string, scheduleData: ScheduleData): Promise<LearningSchedule> {
+    const existing = await this.getLearningSchedule(userProfileId);
+    if (!existing) {
+      throw new Error("Schedule not found");
+    }
+    
+    const [updated] = await db
+      .update(learningSchedules)
+      .set({ scheduleData: scheduleData as any })
+      .where(eq(learningSchedules.id, existing.id))
+      .returning();
+    return updated;
   }
 
   async createUserProgress(insertProgress: InsertUserProgress): Promise<UserProgress> {

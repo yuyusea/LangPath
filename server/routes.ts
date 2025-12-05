@@ -1,9 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generateLearningSchedule } from "./openai";
+import { generateLearningSchedule, generateBookSchedule } from "./openai";
 import { insertUserProfileSchema } from "@shared/schema";
 import type { ScheduleData, Task } from "@shared/schema";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -49,6 +50,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ error: error.message || "Failed to create profile" });
     }
   });
+
+  // Create book-based profile and generate learning schedule
+  const bookProfileSchema = z.object({
+    bookTitle: z.string().min(1, "Book title is required"),
+    tableOfContents: z.string().optional(),
+    tocImageBase64: z.string().optional(),
+    language: z.string().min(1, "Language is required"),
+    dailyTime: z.string().min(1, "Daily time is required"),
+    deadline: z.string().min(1, "Deadline is required"),
+  });
+
+  app.post("/api/profile/book", async (req, res) => {
+    try {
+      const bookData = bookProfileSchema.parse(req.body);
+      
+      // Generate schedule from table of contents
+      const scheduleData = await generateBookSchedule({
+        bookTitle: bookData.bookTitle,
+        tableOfContents: bookData.tableOfContents || "",
+        tocImageBase64: bookData.tocImageBase64,
+        language: bookData.language,
+        dailyTime: bookData.dailyTime,
+        deadline: bookData.deadline,
+      });
+      
+      // Create user profile with book info
+      const profile = await storage.createUserProfile({
+        language: bookData.language,
+        currentLevel: "book_based",
+        goal: "book_completion",
+        deadline: bookData.deadline,
+        dailyTime: bookData.dailyTime,
+        learningStyle: "book_based",
+        weakness: "",
+        isBookBased: "true",
+        bookTitle: bookData.bookTitle,
+        tableOfContents: bookData.tableOfContents || "",
+      });
+      
+      // Save schedule
+      const schedule = await storage.createLearningSchedule({
+        userProfileId: profile.id,
+        scheduleData: scheduleData as any,
+      });
+      
+      // Initialize progress
+      const today = new Date().toISOString().split('T')[0];
+      const progress = await storage.createUserProgress({
+        userProfileId: profile.id,
+        currentWeek: 1,
+        totalWeeks: scheduleData.totalWeeks,
+        completedDays: {},
+        streakDays: 0,
+        totalTasksCompleted: 0,
+        lastCompletedDate: null,
+        startDate: today,
+        taskCompletions: {},
+        completedDates: {},
+      });
+      
+      res.json({
+        id: profile.id,
+        profile,
+        schedule: scheduleData,
+        progress,
+      });
+    } catch (error: any) {
+      console.error("Error creating book profile:", error);
+      res.status(400).json({ error: error.message || "Failed to create book profile" });
+    }
+  });
   
   // Get learning schedule
   app.get("/api/schedule/:profileId", async (req, res) => {
@@ -64,6 +136,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching schedule:", error);
       res.status(500).json({ error: "Failed to fetch schedule" });
+    }
+  });
+
+  // Update a task in the schedule
+  const updateTaskSchema = z.object({
+    weekNumber: z.number(),
+    dayOfWeek: z.string(),
+    taskIndex: z.number(),
+    task: z.object({
+      title: z.string().min(1),
+      duration: z.string().min(1),
+      details: z.array(z.string()).optional(),
+    }),
+  });
+
+  app.patch("/api/schedule/:profileId/task", async (req, res) => {
+    try {
+      const { profileId } = req.params;
+      const { weekNumber, dayOfWeek, taskIndex, task } = updateTaskSchema.parse(req.body);
+      
+      const schedule = await storage.getLearningSchedule(profileId);
+      if (!schedule) {
+        return res.status(404).json({ error: "Schedule not found" });
+      }
+      
+      const scheduleData = schedule.scheduleData as unknown as ScheduleData;
+      
+      // Find and update the task
+      let updated = false;
+      for (const month of scheduleData.months) {
+        const week = month.weeks.find(w => w.weekNumber === weekNumber);
+        if (week) {
+          const day = week.days.find(d => d.dayOfWeek === dayOfWeek);
+          if (day && day.tasks[taskIndex]) {
+            day.tasks[taskIndex] = task;
+            updated = true;
+            break;
+          }
+        }
+      }
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      
+      const updatedSchedule = await storage.updateLearningSchedule(profileId, scheduleData);
+      res.json(updatedSchedule.scheduleData);
+    } catch (error: any) {
+      console.error("Error updating task:", error);
+      res.status(400).json({ error: error.message || "Failed to update task" });
+    }
+  });
+
+  // Add a task to a day
+  const addTaskSchema = z.object({
+    weekNumber: z.number(),
+    dayOfWeek: z.string(),
+    task: z.object({
+      title: z.string().min(1),
+      duration: z.string().min(1),
+      details: z.array(z.string()).optional(),
+    }),
+  });
+
+  app.post("/api/schedule/:profileId/task", async (req, res) => {
+    try {
+      const { profileId } = req.params;
+      const { weekNumber, dayOfWeek, task } = addTaskSchema.parse(req.body);
+      
+      const schedule = await storage.getLearningSchedule(profileId);
+      if (!schedule) {
+        return res.status(404).json({ error: "Schedule not found" });
+      }
+      
+      const scheduleData = schedule.scheduleData as unknown as ScheduleData;
+      
+      // Find the day and add task
+      let added = false;
+      for (const month of scheduleData.months) {
+        const week = month.weeks.find(w => w.weekNumber === weekNumber);
+        if (week) {
+          const day = week.days.find(d => d.dayOfWeek === dayOfWeek);
+          if (day) {
+            day.tasks.push(task);
+            added = true;
+            break;
+          }
+        }
+      }
+      
+      if (!added) {
+        return res.status(404).json({ error: "Day not found" });
+      }
+      
+      const updatedSchedule = await storage.updateLearningSchedule(profileId, scheduleData);
+      res.json(updatedSchedule.scheduleData);
+    } catch (error: any) {
+      console.error("Error adding task:", error);
+      res.status(400).json({ error: error.message || "Failed to add task" });
+    }
+  });
+
+  // Delete a task from a day
+  const deleteTaskSchema = z.object({
+    weekNumber: z.number(),
+    dayOfWeek: z.string(),
+    taskIndex: z.number(),
+  });
+
+  app.delete("/api/schedule/:profileId/task", async (req, res) => {
+    try {
+      const { profileId } = req.params;
+      const { weekNumber, dayOfWeek, taskIndex } = deleteTaskSchema.parse(req.body);
+      
+      const schedule = await storage.getLearningSchedule(profileId);
+      if (!schedule) {
+        return res.status(404).json({ error: "Schedule not found" });
+      }
+      
+      const scheduleData = schedule.scheduleData as unknown as ScheduleData;
+      
+      // Find and delete the task
+      let deleted = false;
+      for (const month of scheduleData.months) {
+        const week = month.weeks.find(w => w.weekNumber === weekNumber);
+        if (week) {
+          const day = week.days.find(d => d.dayOfWeek === dayOfWeek);
+          if (day && day.tasks[taskIndex]) {
+            day.tasks.splice(taskIndex, 1);
+            deleted = true;
+            break;
+          }
+        }
+      }
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+      
+      const updatedSchedule = await storage.updateLearningSchedule(profileId, scheduleData);
+      res.json(updatedSchedule.scheduleData);
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      res.status(400).json({ error: error.message || "Failed to delete task" });
     }
   });
   

@@ -7,12 +7,16 @@ import { z } from "zod";
 export const userProfiles = pgTable("user_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   language: text("language").notNull(),
-  currentLevel: text("current_level").notNull(),
-  goal: text("goal").notNull(),
+  currentLevel: text("current_level").notNull().default(""),
+  goal: text("goal").notNull().default(""),
   deadline: text("deadline").notNull(),
   dailyTime: text("daily_time").notNull(),
-  learningStyle: text("learning_style").notNull(),
-  weakness: text("weakness").notNull(),
+  learningStyle: text("learning_style").notNull().default(""),
+  weakness: text("weakness").notNull().default(""),
+  // Book-based learning fields
+  isBookBased: text("is_book_based").default("false"),
+  bookTitle: text("book_title"),
+  tableOfContents: text("table_of_contents"),
 });
 
 // AI-generated learning schedule
