@@ -135,14 +135,17 @@ export default function Profile() {
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => setLocation("/onboarding")}
+                onClick={() => {
+                  localStorage.removeItem("langpath_profile_id");
+                  setLocation("/welcome");
+                }}
                 data-testid="button-regenerate"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 학습 계획 재생성
               </Button>
               <p className="text-sm text-muted-foreground px-2">
-                학습 목표나 상황이 변경되었다면 새로운 계획을 생성할 수 있습니다.
+                학습 목표나 상황이 변경되었다면 처음부터 새로운 계획을 생성할 수 있습니다.
               </p>
             </CardContent>
           </Card>

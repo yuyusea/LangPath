@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -16,17 +16,13 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, ArrowRight, BookOpen, Upload, Loader2, Image as ImageIcon, Type } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Loader2 } from "lucide-react";
 import type { UserProfile } from "@shared/schema";
 import { LANGUAGE_OPTIONS } from "@shared/schema";
-
-type InputMethod = "text" | "image";
 
 interface BookFormData {
   bookTitle: string;
   tableOfContents: string;
-  tocImage: File | null;
-  tocImageBase64: string;
   language: string;
   dailyTime: string;
   deadline: string;
@@ -49,15 +45,11 @@ const DEADLINE_OPTIONS = [
 export default function BookOnboardingPage() {
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
-  const [inputMethod, setInputMethod] = useState<InputMethod>("text");
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
   const [formData, setFormData] = useState<BookFormData>({
     bookTitle: "",
     tableOfContents: "",
-    tocImage: null,
-    tocImageBase64: "",
     language: "",
     dailyTime: "",
     deadline: "",
@@ -70,7 +62,6 @@ export default function BookOnboardingPage() {
       const response = await apiRequest("POST", "/api/profile/book", {
         bookTitle: data.bookTitle,
         tableOfContents: data.tableOfContents,
-        tocImageBase64: data.tocImageBase64,
         language: data.language,
         dailyTime: data.dailyTime,
         deadline: data.deadline,
@@ -95,40 +86,12 @@ export default function BookOnboardingPage() {
     },
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "파일이 너무 큽니다",
-          description: "5MB 이하의 이미지를 업로드해 주세요.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          tocImage: file,
-          tocImageBase64: reader.result as string,
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const canProceed = () => {
     switch (step) {
       case 1:
         return formData.bookTitle.trim().length > 0 && formData.language;
       case 2:
-        if (inputMethod === "text") {
-          return formData.tableOfContents.trim().length > 0;
-        } else {
-          return formData.tocImageBase64.length > 0;
-        }
+        return formData.tableOfContents.trim().length > 0;
       case 3:
         return formData.dailyTime && formData.deadline;
       default:
@@ -214,91 +177,20 @@ export default function BookOnboardingPage() {
               </p>
             </div>
 
-            <div className="flex gap-2 justify-center">
-              <Button
-                variant={inputMethod === "text" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setInputMethod("text")}
-                data-testid="button-input-text"
-              >
-                <Type className="w-4 h-4 mr-2" />
-                텍스트 입력
-              </Button>
-              <Button
-                variant={inputMethod === "image" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setInputMethod("image")}
-                data-testid="button-input-image"
-              >
-                <ImageIcon className="w-4 h-4 mr-2" />
-                이미지 업로드
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="toc">목차 내용</Label>
+              <Textarea
+                id="toc"
+                placeholder={`예:\n1과 인사\n2과 자기소개\n3과 숫자\n4과 날짜와 시간\n...`}
+                value={formData.tableOfContents}
+                onChange={(e) => setFormData(prev => ({ ...prev, tableOfContents: e.target.value }))}
+                className="min-h-[200px] resize-none"
+                data-testid="textarea-toc"
+              />
+              <p className="text-xs text-muted-foreground">
+                교재의 목차를 그대로 복사하거나 직접 입력해 주세요
+              </p>
             </div>
-
-            {inputMethod === "text" ? (
-              <div className="space-y-2">
-                <Label htmlFor="toc">목차 내용</Label>
-                <Textarea
-                  id="toc"
-                  placeholder={`예:\n1과 인사\n2과 자기소개\n3과 숫자\n4과 날짜와 시간\n...`}
-                  value={formData.tableOfContents}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tableOfContents: e.target.value }))}
-                  className="min-h-[200px] resize-none"
-                  data-testid="textarea-toc"
-                />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  data-testid="input-toc-image"
-                />
-                
-                {formData.tocImageBase64 ? (
-                  <div className="space-y-3">
-                    <div className="relative rounded-lg overflow-hidden border">
-                      <img 
-                        src={formData.tocImageBase64} 
-                        alt="목차 이미지" 
-                        className="w-full max-h-[300px] object-contain"
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full"
-                      data-testid="button-change-image"
-                    >
-                      다른 이미지로 변경
-                    </Button>
-                  </div>
-                ) : (
-                  <Card 
-                    className="border-dashed cursor-pointer hover-elevate"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <CardContent className="p-8 flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                        <Upload className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                      <div className="text-center">
-                        <p className="font-medium text-foreground">
-                          이미지 업로드
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          목차 사진을 촬영하거나 이미지를 선택하세요
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
           </div>
         );
 
@@ -372,12 +264,6 @@ export default function BookOnboardingPage() {
                   <span className="text-muted-foreground">언어</span>
                   <span className="font-medium">
                     {LANGUAGE_OPTIONS.find(l => l.value === formData.language)?.label}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">목차 입력</span>
-                  <span className="font-medium">
-                    {inputMethod === "text" ? "텍스트" : "이미지"}
                   </span>
                 </div>
                 <div className="flex justify-between">
