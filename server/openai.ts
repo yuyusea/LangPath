@@ -572,6 +572,35 @@ function generateBookMockSchedule(bookProfile: BookProfile, totalWeeks: number, 
   
   const chaptersPerWeek = Math.max(1, Math.ceil(chapters.length / totalWeeks));
   
+  // More diverse daily activities with specific details
+  const weekdayActivities = [
+    { main: "새 어휘 학습", sub: "새 단어 익히기", details: ["새 단어 10개 암기", "발음 연습하며 따라 읽기"] },
+    { main: "핵심 문법", sub: "문법 포인트 정리", details: ["문법 규칙 이해하기", "예문 3개씩 작성하기"] },
+    { main: "듣기 훈련", sub: "청취 연습", details: ["교재 오디오 2회 청취", "받아쓰기 연습"] },
+    { main: "회화 연습", sub: "말하기 훈련", details: ["대화문 소리내어 읽기", "핵심 표현 암송"] },
+    { main: "종합 연습", sub: "문제 풀이", details: ["연습 문제 풀기", "틀린 문제 오답 정리"] }
+  ];
+  
+  const reviewActivities = [
+    { title: "플래시카드 복습", details: ["오늘 배운 단어 카드 만들기", "빠른 암기 테스트"] },
+    { title: "예문 만들기", details: ["배운 문법으로 문장 3개 작성", "일기 형식으로 써보기"] },
+    { title: "쉐도잉 연습", details: ["원어민 발음 따라하기", "억양과 리듬 익히기"] },
+    { title: "오늘의 요약", details: ["핵심 내용 3줄 정리", "어려운 부분 체크"] },
+    { title: "퀴즈 풀기", details: ["오늘 배운 내용 자가 테스트", "약한 부분 재복습"] }
+  ];
+  
+  const saturdayActivities = [
+    { title: "주간 어휘 총정리", details: ["이번 주 단어 전체 복습", "헷갈리는 단어 집중 암기"] },
+    { title: "문법 패턴 정리", details: ["주간 문법 요약 노트 작성", "예문과 함께 정리"] },
+    { title: "주간 듣기 복습", details: ["이번 주 오디오 다시 듣기", "청취 속도 높여서 연습"] }
+  ];
+  
+  const sundayActivities = [
+    { title: "실전 연습", details: ["이번 주 배운 내용으로 작문", "가상 대화 연습"] },
+    { title: "주간 성취 점검", details: ["학습 목표 달성도 체크", "다음 주 학습 계획 세우기"] },
+    { title: "복습 테스트", details: ["주간 종합 퀴즈", "오답 노트 정리"] }
+  ];
+  
   const months: MonthPlan[] = [];
   let weekCounter = 1;
   let chapterIndex = 0;
@@ -583,35 +612,58 @@ function generateBookMockSchedule(bookProfile: BookProfile, totalWeeks: number, 
     for (let w = 0; w < 4 && weekCounter <= totalWeeks; w++) {
       const weekChapters = chapters.slice(chapterIndex, chapterIndex + chaptersPerWeek);
       const weekGoal = weekChapters.length > 0 
-        ? weekChapters[0].substring(0, 30) 
+        ? weekChapters[0].substring(0, 50) 
         : `${weekCounter}주차 학습`;
       
       const days: DayPlan[] = dayNames.map((day, dayIndex) => {
-        const isWeekend = dayIndex >= 5;
         const tasks: Task[] = [];
+        const variationIndex = (weekCounter + dayIndex) % 5;
         
-        if (isWeekend) {
+        if (dayIndex === 5) {
+          // Saturday - review day
+          const satActivity = saturdayActivities[(weekCounter - 1) % saturdayActivities.length];
           tasks.push({
-            title: dayIndex === 5 ? "주간 복습" : "연습 및 정리",
-            duration: "30분",
-            details: [
-              `${weekCounter}주차 학습 내용 복습`,
-              "핵심 표현 암기 확인"
-            ]
+            title: satActivity.title,
+            duration: "25분",
+            details: satActivity.details
           });
+          tasks.push({
+            title: "취약점 보강",
+            duration: "15분",
+            details: [`${weekCounter}주차 어려운 부분 재학습`, "추가 예문 연습"]
+          });
+        } else if (dayIndex === 6) {
+          // Sunday - practice day
+          const sunActivity = sundayActivities[(weekCounter - 1) % sundayActivities.length];
+          tasks.push({
+            title: sunActivity.title,
+            duration: "30분",
+            details: sunActivity.details
+          });
+          if (weekCounter % 2 === 0) {
+            tasks.push({
+              title: "미니 모의고사",
+              duration: "15분",
+              details: ["지난 2주 내용 종합 테스트", "실력 점검"]
+            });
+          }
         } else {
-          const currentChapter = weekChapters[dayIndex % weekChapters.length] || weekGoal;
-          const activities = ["어휘 학습", "문법 학습", "듣기 연습", "말하기 연습", "연습 문제"];
+          // Weekdays - main learning
+          const currentChapter = weekChapters[Math.min(dayIndex, weekChapters.length - 1)] || weekGoal;
+          const chapterName = currentChapter.length > 25 ? currentChapter.substring(0, 25) + "..." : currentChapter;
+          const activity = weekdayActivities[dayIndex];
           
           tasks.push({
-            title: `${currentChapter.substring(0, 20)} - ${activities[dayIndex]}`,
+            title: `${chapterName} - ${activity.main}`,
             duration: "20분",
-            details: [`${bookProfile.bookTitle} 교재 학습`, `${languageLabel} 실력 향상`]
+            details: activity.details
           });
+          
+          const review = reviewActivities[variationIndex];
           tasks.push({
-            title: "복습 및 암기",
+            title: review.title,
             duration: "10분",
-            details: ["오늘 배운 표현 복습", "단어 암기"]
+            details: review.details
           });
         }
         
@@ -628,9 +680,10 @@ function generateBookMockSchedule(bookProfile: BookProfile, totalWeeks: number, 
       chapterIndex += chaptersPerWeek;
     }
     
+    const monthGoals = [`${bookProfile.bookTitle} 기초 다지기`, `${bookProfile.bookTitle} 심화 학습`, `${bookProfile.bookTitle} 실전 연습`, `${bookProfile.bookTitle} 완성 단계`, `${bookProfile.bookTitle} 복습 및 정리`, `${bookProfile.bookTitle} 종합 마무리`];
     months.push({
       monthNumber: monthNum,
-      goal: `${bookProfile.bookTitle} ${monthNum}개월차`,
+      goal: monthGoals[(monthNum - 1) % monthGoals.length],
       weeks: weeksInMonth
     });
   }
