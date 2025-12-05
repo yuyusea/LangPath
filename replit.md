@@ -1,15 +1,19 @@
 # LangPath - AI 외국어 학습 컨설턴트
 
 ## 프로젝트 개요
-AI 기반 맞춤형 외국어 학습 스케줄을 제공하는 웹 애플리케이션입니다. 사용자가 7단계 질문에 답변하면 OpenAI가 12주 완성 학습 계획을 자동으로 생성합니다.
+AI 기반 맞춤형 외국어 학습 스케줄을 제공하는 웹 애플리케이션입니다. 두 가지 학습 경로를 지원합니다:
+1. **AI 추천 커리큘럼**: 7단계 질문을 통해 개인화된 학습 계획 생성
+2. **교재 기반 학습**: 사용자가 보유한 교재 목차를 입력하면 해당 교재에 맞는 스케줄 생성
 
 ## 핵심 기능
-1. **온보딩 채팅**: 7단계 질문을 통한 학습자 프로필 수집
-2. **AI 스케줄 생성**: OpenAI를 활용한 맞춤형 12주 학습 계획 자동 생성
-3. **일일 대시보드**: 오늘 할 학습 체크리스트 및 완료 추적
-4. **진행률 시각화**: 주간/전체 진행률, 연속 학습일 표시
-5. **주간 캘린더**: 월~일 학습 완료 여부 시각화
-6. **동기부여**: 학습 완료 시 격려 메시지 및 업적 시스템
+1. **듀얼 온보딩**: AI 커리큘럼 또는 교재 기반 학습 선택
+2. **AI 스케줄 생성**: OpenAI를 활용한 맞춤형 학습 계획 자동 생성
+3. **스케줄 편집**: 할 일 추가/수정/삭제 기능
+4. **일일 대시보드**: 오늘 할 학습 체크리스트 및 완료 추적
+5. **진행률 시각화**: 주간/전체 진행률, 연속 학습일 표시
+6. **주간 캘린더**: 월~일 학습 완료 여부 시각화
+7. **AI 챗봇**: 학습 관련 질문 응답 및 조언
+8. **동기부여**: 학습 완료 시 격려 메시지 및 업적 시스템
 
 ## 기술 스택
 - **Frontend**: React, TypeScript, Tailwind CSS, Shadcn UI
@@ -31,15 +35,18 @@ AI 기반 맞춤형 외국어 학습 스케줄을 제공하는 웹 애플리케�
 │       │   ├── QuestionStep.tsx
 │       │   └── MotivationalMessage.tsx
 │       ├── pages/           # 페이지 컴포넌트
-│       │   ├── onboarding.tsx
+│       │   ├── welcome.tsx      # 시작 화면 (AI/교재 선택)
+│       │   ├── onboarding.tsx   # AI 추천 온보딩
+│       │   ├── book-onboarding.tsx  # 교재 기반 온보딩
 │       │   ├── dashboard.tsx
-│       │   ├── schedule.tsx
+│       │   ├── schedule.tsx     # 편집 기능 포함
+│       │   ├── chat.tsx
 │       │   ├── progress.tsx
 │       │   └── profile.tsx
 │       └── hooks/
 │           └── useUserProfile.ts
 ├── server/
-│   ├── openai.ts           # OpenAI 통합
+│   ├── openai.ts           # OpenAI 통합 (스케줄 생성, 챗봇)
 │   ├── routes.ts           # API 라우트
 │   └── storage.ts          # 데이터 저장소
 └── shared/
@@ -48,7 +55,11 @@ AI 기반 맞춤형 외국어 학습 스케줄을 제공하는 웹 애플리케�
 
 ## API 엔드포인트
 - `POST /api/profile` - 프로필 생성 및 AI 스케줄 생성
+- `POST /api/profile/book` - 교재 기반 프로필 생성 및 스케줄 생성
 - `GET /api/schedule/:profileId` - 학습 스케줄 조회
+- `PATCH /api/schedule/:profileId/task` - 스케줄 할 일 수정
+- `POST /api/schedule/:profileId/task` - 스케줄 할 일 추가
+- `DELETE /api/schedule/:profileId/task` - 스케줄 할 일 삭제
 - `GET /api/progress/:profileId` - 진행 상태 조회
 - `GET /api/today/:profileId` - 오늘 할 학습 조회
 - `POST /api/progress/complete` - 일일 학습 완료 처리
@@ -67,6 +78,13 @@ AI 기반 맞춤형 외국어 학습 스케줄을 제공하는 웹 애플리케�
 5. 진행률 및 스케줄 확인
 
 ## 최근 변경사항
+- 2025-12-06: 교재 기반 학습 및 스케줄 편집 기능 추가
+  - 듀얼 온보딩: Welcome 페이지에서 AI 커리큘럼 vs 교재 기반 학습 선택
+  - 교재 기반 온보딩 4단계 플로우 구현
+  - 목차 텍스트 입력 또는 이미지 업로드(OCR) 지원
+  - 스케줄 편집 기능: 할 일 추가/수정/삭제 모달 UI
+  - DB 스키마에 isBookBased, bookTitle, tableOfContents 컬럼 추가
+
 - 2025-12-05: 스케줄 및 챗봇 개선
   - 학습 스케줄이 사용자 설정 기간(1개월/3개월/6개월)에 맞게 생성됨
   - 스케줄에 월~일 모든 요일의 학습 내용 포함
