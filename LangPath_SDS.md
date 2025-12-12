@@ -1,3 +1,8 @@
+
+
+
+
+
 # Software Design Specification (SDS)
 
 ## LangPath - AI 기반 외국어 학습 컨설턴트 서비스
@@ -236,6 +241,9 @@
 | Due Date | 2025.11.15 |
 
 ---
+
+![usecase_additional](https://github.com/user-attachments/assets/7e3d4744-2f16-4ddc-985c-f399d750a029)
+
 
 ### Use case #4: 교재 기반 학습
 
@@ -490,6 +498,9 @@
 
 ---
 
+![class_additional](https://github.com/user-attachments/assets/4a7f9886-b886-43a3-bef7-f65de7a141b5)
+
+
 #### 7. TextbookSchedule
 
 | 속성 | 타입 | 설명 |
@@ -560,6 +571,50 @@
 2. ScheduleService가 Database에서 12주 학습 데이터를 가져온다
 3. 사용자가 스케줄 페이지에서도 과제를 완료 처리할 수 있다
 4. 대시보드와 스케줄 페이지는 실시간으로 동기화된다
+
+---
+
+### 4.4 교재 기반 학습 Sequence Diagram
+
+사용자 → TextbookPage → TextbookService → AIService → Database
+
+![sequence_textbook](https://github.com/user-attachments/assets/64058d9f-aa5d-4ed1-b688-4eb828fa8c3a)
+
+**설명:**
+1. 사용자가 교재 기반 학습을 선택하면 교재 정보 입력 화면이 표시된다
+2. 사용자는 교재 제목, 언어, 목차, 학습 시간, 목표 기간을 순차적으로 입력한다
+3. TextbookService가 입력된 정보를 기반으로 AIService를 호출한다
+4. AIService가 OpenAI API를 통해 12주 학습 계획을 생성한다
+5. 생성된 스케줄이 Database에 저장되고 사용자는 대시보드로 이동한다
+
+---
+
+### 4.5 스케줄 수정 Sequence Diagram
+
+사용자 → SchedulePage → TaskService → Database
+
+![sequence_edit](https://github.com/user-attachments/assets/c2586fff-beca-4cbd-b2d7-f7184ca189e9)
+
+**설명:**
+1. 사용자가 과제 수정 버튼을 클릭하면 수정 입력 폼이 표시된다
+2. 사용자는 과제 제목, 설명, 소요 시간을 수정할 수 있다
+3. 저장 버튼 클릭 시 TaskService가 수정 내용을 Database에 저장한다
+4. 저장 완료 후 UI가 업데이트된다
+
+---
+
+### 4.6 AI 챗봇 상담 Sequence Diagram
+
+사용자 → ChatbotPage → ChatService → AIService
+
+![sequence_chatbot](https://github.com/user-attachments/assets/87430dcd-4a3e-4a6c-adc0-36b23b6ea010)
+
+**설명:**
+1. 사용자가 챗봇 페이지에 진입하면 인사 메시지와 샘플 질문이 표시된다
+2. 사용자가 질문을 입력하거나 샘플 질문을 클릭한다
+3. ChatService가 사용자 프로필을 포함하여 AIService를 호출한다
+4. AIService가 OpenAI API를 통해 맞춤형 답변을 생성한다
+5. AI 응답이 대화창에 표시되고 히스토리가 유지된다
 
 ---
 
