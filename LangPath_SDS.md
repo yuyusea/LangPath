@@ -11,9 +11,10 @@
 
 ## [ Revision History ]
 
-| Revision date | Version # | Description | Author |
+ Revision date | Version # | Description | Author |
 |--------------|-----------|-------------|---------|
 | 11/07/2025 | 1.0 | Initial SDS document creation | 정창화 |
+| 12/12/2025 | 1.1 | Added Use case #4, #5, #6 (교재 기반 학습, 스케줄 수정, AI 챗봇 상담), Added TextbookSchedule and ChatMessage classes | 정창화 |
 
 ---
 
@@ -236,6 +237,159 @@
 
 ---
 
+### Use case #4: 교재 기반 학습
+
+**GENERAL CHARACTERISTICS**
+
+| 항목 | 내용 |
+|-----|------|
+| Summary | 사용자가 보유한 교재 정보를 입력하여 맞춤형 학습 계획을 생성한다 |
+| Scope | LangPath - AI 기반 외국어 학습 컨설턴트 서비스 |
+| Level | User level |
+| Author | 정창화 |
+| Last Update | 2025.12.12 |
+| Status | Analysis (Finalize) |
+| Primary Actor | 학습자 |
+| Preconditions | 사용자가 LangPath 애플리케이션에 접속한 상태여야 한다 |
+| Trigger | 사용자가 교재 기반 학습을 선택할 때 |
+| Success Post Condition | 교재 목차 기반의 학습 계획이 생성되고 대시보드로 이동한다 |
+| Failed Post Condition | 생성이 실패하고 사용자에게 재시도 안내가 표시된다 |
+
+**MAIN SUCCESS SCENARIO**
+
+| Step | Action |
+|------|--------|
+| S | 사용자가 교재 기반 학습 계획을 생성한다 |
+| 1 | 이 Use case는 사용자가 교재 기반 학습을 선택할 때 시작된다 |
+| 2 | 사용자는 교재 제목을 입력한다 (예: "민나노 니홍고 1") |
+| 3 | 사용자는 학습 언어를 선택한다 |
+| 4 | 사용자는 교재 목차를 입력한다 (예: "1과 인사, 2과 자기소개") |
+| 5 | 사용자는 일일 학습 시간을 설정한다 |
+| 6 | 사용자는 목표 기간을 설정한다 |
+| 7 | 시스템은 AI를 통해 교재 목차 기반 스케줄을 생성한다 |
+| 8 | 생성된 학습 계획은 데이터베이스에 저장된다 |
+| 9 | 시스템은 자동으로 대시보드로 이동한다 |
+| 10 | 이 Use case는 대시보드 진입 시 끝난다 |
+
+**EXTENSION SCENARIOS**
+
+| Step | Branching Action |
+|------|------------------|
+| 2-4 | a. 필수 입력 항목이 비어있는 경우<br>...a1. "다음" 버튼이 비활성화된다<br>...a2. 해당 항목을 입력할 때까지 다음 단계로 진행할 수 없다 |
+| 7 | b. AI 생성이 실패한 경우<br>...b1. 에러 메시지를 표시한다<br>...b2. 사용자에게 다시 시도하도록 안내한다 |
+
+**RELATED INFORMATION**
+
+| 항목 | 내용 |
+|-----|------|
+| Performance | ≤ 30 seconds |
+| Frequency | 사용자당 평균 1-2회 |
+| Concurrency | 동시 처리 가능 (API rate limit 내) |
+| Due Date | 2025.12.15 |
+
+---
+
+### Use case #5: 스케줄 수정
+
+**GENERAL CHARACTERISTICS**
+
+| 항목 | 내용 |
+|-----|------|
+| Summary | 사용자가 생성된 과제의 내용을 직접 수정한다 |
+| Scope | LangPath - AI 기반 외국어 학습 컨설턴트 서비스 |
+| Level | User level |
+| Author | 정창화 |
+| Last Update | 2025.12.12 |
+| Status | Analysis (Finalize) |
+| Primary Actor | 학습자 |
+| Preconditions | 학습 계획이 생성되어 있어야 한다 |
+| Trigger | 사용자가 과제 수정을 선택할 때 |
+| Success Post Condition | 과제 내용이 수정되고 저장된다 |
+| Failed Post Condition | 수정 내용이 저장되지 않고 이전 상태를 유지한다 |
+
+**MAIN SUCCESS SCENARIO**
+
+| Step | Action |
+|------|--------|
+| S | 사용자가 과제 내용을 수정한다 |
+| 1 | 이 Use case는 사용자가 과제 수정 버튼을 클릭할 때 시작된다 |
+| 2 | 시스템은 수정 가능한 입력 필드를 표시한다 |
+| 3 | 사용자는 과제 제목을 수정할 수 있다 |
+| 4 | 사용자는 과제 설명을 수정할 수 있다 |
+| 5 | 사용자는 예상 소요 시간을 수정할 수 있다 |
+| 6 | 사용자가 저장 버튼을 클릭한다 |
+| 7 | 시스템은 수정 내용을 즉시 데이터베이스에 저장한다 |
+| 8 | 이 Use case는 저장이 완료되면 끝난다 |
+
+**EXTENSION SCENARIOS**
+
+| Step | Branching Action |
+|------|------------------|
+| 3-5 | a. 필수 입력 항목이 비어있는 경우<br>...a1. 저장 버튼이 비활성화된다<br>...a2. 빈 필드에 에러 표시가 나타난다 |
+| 7 | b. 데이터베이스 저장에 실패한 경우<br>...b1. 에러 메시지를 표시한다<br>...b2. 수정 전 상태를 유지한다 |
+
+**RELATED INFORMATION**
+
+| 항목 | 내용 |
+|-----|------|
+| Performance | ≤ 500ms |
+| Frequency | 사용자당 평균 0-5회 |
+| Concurrency | 제한 없음 |
+| Due Date | 2025.12.15 |
+
+---
+
+### Use case #6: AI 챗봇 상담
+
+**GENERAL CHARACTERISTICS**
+
+| 항목 | 내용 |
+|-----|------|
+| Summary | AI 기반 학습 어시스턴트가 사용자의 질문에 답변한다 |
+| Scope | LangPath - AI 기반 외국어 학습 컨설턴트 서비스 |
+| Level | User level |
+| Author | 정창화 |
+| Last Update | 2025.12.12 |
+| Status | Analysis (Finalize) |
+| Primary Actor | 학습자 |
+| Preconditions | 학습 프로필이 생성되어 있어야 한다 |
+| Trigger | 사용자가 챗봇 페이지에서 메시지를 전송할 때 |
+| Success Post Condition | AI가 사용자 질문에 맞춤형 답변을 제공한다 |
+| Failed Post Condition | 에러 메시지가 표시되고 재시도를 안내한다 |
+
+**MAIN SUCCESS SCENARIO**
+
+| Step | Action |
+|------|--------|
+| S | 사용자가 AI 챗봇에게 질문한다 |
+| 1 | 이 Use case는 사용자가 챗봇 페이지에 진입할 때 시작된다 |
+| 2 | 시스템은 초기 인사 메시지와 샘플 질문을 표시한다 |
+| 3 | 사용자는 입력창에 질문을 입력하거나 샘플 질문을 클릭한다 |
+| 4 | 시스템은 로딩 인디케이터를 표시한다 |
+| 5 | 시스템은 사용자 프로필을 고려하여 OpenAI API를 호출한다 |
+| 6 | AI 응답이 대화창에 표시된다 |
+| 7 | 대화 히스토리가 유지된다 |
+| 8 | 이 Use case는 사용자가 페이지를 떠나면 끝난다 |
+
+**EXTENSION SCENARIOS**
+
+| Step | Branching Action |
+|------|------------------|
+| 3 | a. 입력창이 비어있는 경우<br>...a1. 전송 버튼이 비활성화된다 |
+| 3 | b. 메시지가 500자를 초과하는 경우<br>...b1. 경고 메시지가 표시된다<br>...b2. 전송 버튼이 비활성화된다 |
+| 5 | c. API 호출이 실패한 경우<br>...c1. "죄송합니다, 다시 시도해주세요" 메시지가 표시된다 |
+
+**RELATED INFORMATION**
+
+| 항목 | 내용 |
+|-----|------|
+| Performance | ≤ 10 seconds |
+| Frequency | 사용자당 하루 평균 3-10회 |
+| Concurrency | 동시 처리 가능 (API rate limit 내) |
+| Due Date | 2025.12.15 |
+
+---
+
 ## 3. Class diagram
 
 ### 주요 클래스 다이어그램
@@ -333,6 +487,36 @@
 | updateProgress() | void | 진행률 업데이트 |
 | calculateStreak() | number | 연속 일수 계산 |
 | getWeeklyProgress() | object | 주간 진행 상황 조회 |
+
+---
+
+#### 7. TextbookSchedule
+
+| 속성 | 타입 | 설명 |
+|-----|------|------|
+| textbookTitle | string | 교재 제목 |
+| language | string | 학습 언어 |
+| tableOfContents | string | 교재 목차 |
+| dailyTime | string | 일일 학습 시간 |
+| duration | string | 목표 기간 |
+
+| 메서드 | 반환 타입 | 설명 |
+|-------|----------|------|
+| generateFromTextbook() | LearningSchedule | 교재 기반 스케줄 생성 |
+
+#### 8. ChatMessage
+
+| 속성 | 타입 | 설명 |
+|-----|------|------|
+| id | string | 메시지 고유 ID |
+| role | string | 역할 (user / assistant) |
+| content | string | 메시지 내용 |
+| timestamp | Date | 전송 시간 |
+
+| 메서드 | 반환 타입 | 설명 |
+|-------|----------|------|
+| send() | void | 메시지 전송 |
+| getHistory() | ChatMessage[] | 대화 히스토리 조회 |
 
 ---
 
